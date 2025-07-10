@@ -6,6 +6,7 @@ const connectDB = require('./config');
 // Import routes
 const facultyRoutes = require('./routes/faculty');
 const timetableRoutes = require('./routes/timetable');
+const generatedTimetableRoutes = require('./routes/generatedTimetable');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -22,6 +23,7 @@ const startServer = async () => {
     // Routes
     app.use('/api/faculty', facultyRoutes);
     app.use('/api/timetable', timetableRoutes);
+    app.use('/api/generated-timetables', generatedTimetableRoutes);
 
     // Basic route
     app.get('/', (req, res) => {

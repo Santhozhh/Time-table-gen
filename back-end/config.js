@@ -6,10 +6,7 @@ const MONGODB_URI = 'mongodb+srv://ksdsanthosh130:kudos@lms.ze750zk.mongodb.net/
 
 const connectDB = async () => {
   try {
-    const conn = await mongoose.connect(MONGODB_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
+    const conn = await mongoose.connect(MONGODB_URI);
 
     console.log('\x1b[32m%s\x1b[0m', '🎯 MongoDB Connected Successfully!');
     console.log('\x1b[36m%s\x1b[0m', `👉 Connected to Database: ${conn.connection.db.databaseName}`);

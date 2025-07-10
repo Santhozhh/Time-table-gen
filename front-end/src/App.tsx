@@ -1,5 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
-import { MdSchedule, MdPerson, MdGroup, MdDashboard, MdEdit } from 'react-icons/md';
+import { MdSchedule, MdPerson, MdGroup, MdEdit } from 'react-icons/md';
 import { FaGraduationCap } from 'react-icons/fa';
 import MakeTimetable from './pages/MakeTimetable';
 import ViewStudentTimetables from './pages/ViewStudentTimetables';
@@ -33,22 +33,15 @@ function App() {
               <FaGraduationCap className="text-3xl text-white" />
             </div>
             <h1 className="text-xl font-bold text-gray-800 leading-tight">
-              Time Table<br/>Generator
+              VCET<br/>TIME TABLE
             </h1>
           </div>
           <ul className="space-y-3 flex-1">
             <li>
               <NavLink 
-                to="/dashboard" 
-                icon={<MdDashboard />} 
-                text="Dashboard"
-              />
-            </li>
-            <li>
-              <NavLink 
                 to="/make-timetable" 
                 icon={<MdSchedule />} 
-                text="Generate Timetable"
+                text="MAKE  Timetable"
               />
             </li>
             <li>
@@ -76,7 +69,7 @@ function App() {
           <div className="pt-6 mt-6 border-t border-gray-100">
             <div className="px-6 py-4 rounded-xl bg-blue-50">
               <p className="text-sm text-gray-600">
-                Made with ❤️ by<br/>
+                Made with  by<br/>
                 <span className="font-semibold text-[#4169E1]">VCET Students</span>
               </p>
             </div>

@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { MdAdd, MdSchedule, MdSchool, MdCode, MdAccessTime, MdPerson, MdPlayArrow, MdSave, MdDelete } from 'react-icons/md';
+import { generatedTimetableApi } from '../services/api';
 
 interface TimetableForm {
   courseName: string;
   courseCode: string;
-  type: 'theory' | 'practical';
+  type: 'theory' | 'practical' | 'theory_practical' | 'one_credit' | 'honors' | 'other';
   hoursPerWeek: number;
   facultyId: string;
+  additionalFacultyId?: string;
+  section: string;
 }
 
 interface Faculty {
@@ -21,7 +25,9 @@ interface TimetableCell {
   courseName: string;
   courseCode: string;
   facultyId: string;
-  type: 'theory' | 'practical';
+  additionalFacultyId?: string;
+  type: 'theory' | 'practical' | 'theory_practical' | 'one_credit' | 'honors' | 'other';
+  section: string;
 }
 
 const MakeTimetable: React.FC = () => {
@@ -30,7 +36,9 @@ const MakeTimetable: React.FC = () => {
     courseCode: '',
     type: 'theory',
     hoursPerWeek: 0,
-    facultyId: ''
+    facultyId: '',
+    additionalFacultyId: '',
+    section: 'A'
   }]);
 
   const [faculty, setFaculty] = useState<Faculty[]>([]);
@@ -39,6 +47,26 @@ const MakeTimetable: React.FC = () => {
   );
   const [showTimetable, setShowTimetable] = useState(false);
   const [currentFormIndex, setCurrentFormIndex] = useState(0);
+  const [unavailable, setUnavailable] = useState<(TimetableCell | null)[][]>(Array(6).fill(null).map(()=>Array(7).fill(null)));
+
+  // compute unavailable slots for faculty
+  const computeUnavailable = async (facultyId:string)=>{
+    if(!facultyId) { setUnavailable(Array(6).fill(null).map(()=>Array(7).fill(null))); return; }
+    try{
+      const { data } = await generatedTimetableApi.getAll();
+      const matrix:(TimetableCell|null)[][] = Array(6).fill(null).map(()=>Array(7).fill(null));
+      data.forEach((tt:any)=>{
+        tt.timetable.forEach((dayRow:any, dIdx:number)=>{
+          dayRow.forEach((cell:any, pIdx:number)=>{
+            if(cell && (cell.facultyId===facultyId || cell.additionalFacultyId===facultyId)){
+              matrix[dIdx][pIdx]=cell as TimetableCell;
+            }
+          });
+        });
+      });
+      setUnavailable(matrix);
+    }catch(err){console.error('unavailable calc err',err);}
+  };
 
   useEffect(() => {
     const fetchFaculty = async () => {
@@ -66,7 +94,17 @@ const MakeTimetable: React.FC = () => {
       [name]: value
     };
     setForms(newForms);
+    if(index===currentFormIndex && (e.target.name==='facultyId')){
+      computeUnavailable(e.target.value);
+    }
   };
+
+  // when currentFormIndex changes update unavailable for that faculty
+  useEffect(()=>{
+    const facId = forms[currentFormIndex]?.facultyId;
+    computeUnavailable(facId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[currentFormIndex]);
 
   const addNewSubject = () => {
     setForms([...forms, {
@@ -74,7 +112,9 @@ const MakeTimetable: React.FC = () => {
       courseCode: '',
       type: 'theory',
       hoursPerWeek: 0,
-      facultyId: ''
+      facultyId: '',
+      additionalFacultyId: '',
+      section: 'A'
     }]);
   };
 
@@ -95,6 +135,11 @@ const MakeTimetable: React.FC = () => {
       cell?.courseCode === currentForm.courseCode
     ).length;
 
+    if (unavailable[dayIndex][periodIndex] && !timetable[dayIndex][periodIndex]) {
+      alert('Faculty already allocated in another class at this time');
+      return;
+    }
+
     if (currentHours >= currentForm.hoursPerWeek && !timetable[dayIndex][periodIndex]) {
       alert('All hours for this course have been allocated!');
       return;
@@ -107,7 +152,9 @@ const MakeTimetable: React.FC = () => {
             courseName: currentForm.courseName,
             courseCode: currentForm.courseCode,
             facultyId: currentForm.facultyId,
-            type: currentForm.type
+            additionalFacultyId: currentForm.additionalFacultyId,
+            type: currentForm.type,
+            section: currentForm.section
           };
         }
         return cell;
@@ -117,29 +164,47 @@ const MakeTimetable: React.FC = () => {
     setTimetable(newTimetable);
   };
 
+  /* -------------------- Drag & Drop -------------------- */
+  const handleDragStart = (index:number, e:React.DragEvent<HTMLLIElement>)=>{
+    e.dataTransfer.setData('subjectIndex', String(index));
+  };
+
+  const handleDragOver = (e:React.DragEvent<HTMLTableCellElement>)=>{
+    e.preventDefault();
+  };
+
+  const handleDrop = (dayIndex:number, periodIndex:number, e:React.DragEvent<HTMLTableCellElement>)=>{
+    e.preventDefault();
+    const idxStr = e.dataTransfer.getData('subjectIndex');
+    if(!idxStr) return;
+    const subIdx = parseInt(idxStr,10);
+    setCurrentFormIndex(subIdx);
+    // use click logic reuse
+    handleCellClick(dayIndex, periodIndex);
+  };
+
   const handleGenerate = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/timetable', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          timetable,
-          courses: forms
-        }),
+      const { status, data } = await generatedTimetableApi.create({
+        timetable,
+        courses: forms
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to save timetable');
+      if (status === 201 || status === 200) {
+        alert('Timetable generated and saved successfully!');
+        navigate('/view-student-timetables');
+      } else if (status === 409) {
+        alert(data.message || 'Faculty conflict detected!');
+      } else {
+        alert('Failed to generate timetable. Please try again.');
       }
-
-      alert('Timetable generated and saved successfully!');
     } catch (error) {
       console.error('Error generating timetable:', error);
       alert('Failed to generate timetable. Please try again.');
     }
   };
+
+  const navigate = useNavigate();
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -154,12 +219,12 @@ const MakeTimetable: React.FC = () => {
             </div>
           </div>
           
-          <form onSubmit={handleSubmit} className="p-6">
+          <form onSubmit={handleSubmit} className="p-6 space-y-6">
             {forms.map((form, index) => (
               <div key={index} className="form-section">
                 <div className="flex justify-between items-center mb-6">
                   <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-                    <MdSchool className="text-[#4169E1]" />
+                    <MdSchool className="text-blue-600 text-xl" />
                     Subject {index + 1}
                   </h3>
                   {index > 0 && (
@@ -168,14 +233,14 @@ const MakeTimetable: React.FC = () => {
                       onClick={() => removeSubject(index)}
                       className="btn-danger"
                     >
-                      <MdDelete />
+                      <MdDelete className="text-lg" />
                       Remove
                     </button>
                   )}
                 </div>
                 
                 <div className="form-container">
-                  <div className="space-y-2">
+                  <div className="form-group">
                     <label className="form-label">Course Name</label>
                     <input
                       type="text"
@@ -188,7 +253,7 @@ const MakeTimetable: React.FC = () => {
                     />
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="form-group">
                     <label className="form-label">Course Code</label>
                     <input
                       type="text"
@@ -201,7 +266,7 @@ const MakeTimetable: React.FC = () => {
                     />
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="form-group">
                     <label className="form-label">Type</label>
                     <select
                       name="type"
@@ -212,10 +277,14 @@ const MakeTimetable: React.FC = () => {
                     >
                       <option value="theory">Theory</option>
                       <option value="practical">Practical</option>
+                      <option value="theory_practical">Theory + Practical</option>
+                      <option value="one_credit">One Credit Course</option>
+                      <option value="honors">Honors</option>
+                      <option value="other">Other</option>
                     </select>
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="form-group">
                     <label className="form-label">Hours per Week</label>
                     <input
                       type="number"
@@ -230,7 +299,7 @@ const MakeTimetable: React.FC = () => {
                     />
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="form-group">
                     <label className="form-label">Faculty</label>
                     <select
                       name="facultyId"
@@ -247,15 +316,32 @@ const MakeTimetable: React.FC = () => {
                       ))}
                     </select>
                   </div>
+
+                  {(form.type==='practical' || form.type==='theory_practical') && (
+                    <div className="form-group">
+                      <label className="form-label">Additional Faculty (Practical)</label>
+                      <select name="additionalFacultyId" value={form.additionalFacultyId} onChange={(e)=>handleInputChange(index,e)} required className="input-field">
+                        <option value="">Select Faculty</option>
+                        {faculty.map(f=>(<option key={f._id} value={f._id}>{f.name} ({f.code})</option>))}
+                      </select>
+                    </div>
+                  )}
+
+                  <div className="form-group">
+                    <label className="form-label">Section</label>
+                    <select name="section" value={form.section} onChange={(e)=>handleInputChange(index,e)} className="input-field">
+                      {['A','B','C'].map(sec=>(<option key={sec} value={sec}>{sec}</option>))}
+                    </select>
+                  </div>
                 </div>
               </div>
             ))}
 
-            <div className="flex justify-between items-center mt-8">
+            <div className="flex gap-4 justify-between mt-6">
               <button
                 type="button"
                 onClick={addNewSubject}
-                className="btn-secondary"
+                className="btn-primary"
               >
                 <MdAdd className="text-xl" />
                 Add Subject
@@ -266,7 +352,7 @@ const MakeTimetable: React.FC = () => {
                 className="btn-primary"
               >
                 <MdPlayArrow className="text-xl" />
-                Continue to Timetable
+                Continue
               </button>
             </div>
           </form>
@@ -313,18 +399,26 @@ const MakeTimetable: React.FC = () => {
                         <td
                           key={periodIndex}
                           onClick={() => handleCellClick(dayIndex, periodIndex)}
-                          className={`table-cell-interactive ${
-                            cell ? 'bg-blue-50/50' : 'bg-white'
-                          }`}
+                          onDragOver={handleDragOver}
+                          onDrop={(e)=>handleDrop(dayIndex, periodIndex, e)}
+                          className={`table-cell-interactive ${cell ? 'bg-blue-50/50' : unavailable[dayIndex][periodIndex] ? 'bg-red-50/60 cursor-not-allowed' : 'bg-white'}`}
                         >
-                          {cell && (
+                          {cell ? (
                             <div className="space-y-1">
                               <div className="font-medium text-gray-800">{cell.courseName}</div>
                               <div className="text-sm text-[#4169E1]">{cell.courseCode}</div>
                               <div className="text-xs text-gray-500">
-                                {faculty.find(f => f._id === cell.facultyId)?.name}
+                                {[cell.facultyId, cell.additionalFacultyId].filter(Boolean).map(id=>faculty.find(f=>f._id===id)?.name).filter(Boolean).join(', ')} - Section {cell.section}
                               </div>
                             </div>
+                          ) : (
+                            unavailable[dayIndex][periodIndex] && (
+                              <div className="space-y-1 opacity-70 text-red-700">
+                                <div className="font-medium">{unavailable[dayIndex][periodIndex]?.courseName}</div>
+                                <div className="text-sm">{unavailable[dayIndex][periodIndex]?.courseCode}</div>
+                                <div className="text-xs">Sec {unavailable[dayIndex][periodIndex]?.section}</div>
+                              </div>
+                            )
                           )}
                         </td>
                       );
@@ -333,6 +427,31 @@ const MakeTimetable: React.FC = () => {
                 ))}
               </tbody>
             </table>
+          </div>
+
+          {/* Subject List */}
+          <div className="mt-6">
+            <div className="card p-6">
+              <h3 className="text-xl font-semibold text-gray-800 mb-4">Subject List</h3>
+              <ul className="space-y-3">
+                {forms.map((subj, idx) => (
+                  <li
+                    key={idx}
+                    className="subject-item cursor-move"
+                    draggable
+                    onDragStart={(e)=>handleDragStart(idx,e)}
+                    onClick={()=>setCurrentFormIndex(idx)}
+                  >
+                    <div>
+                      <p className="font-medium text-gray-800">{subj.courseName}</p>
+                      <p className="text-sm text-blue-600">{subj.courseCode}</p>
+                    </div>
+                    <div className="text-sm text-gray-500 capitalize">{subj.type}</div>
+                    <div className="text-xs text-gray-500">Section: {subj.section}</div>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         </div>
       )}

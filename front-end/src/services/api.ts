@@ -29,4 +29,9 @@ export const timetableApi = {
   checkAvailability: (data: any) => api.post('/timetable/check-availability', data),
 };
 
+export const generatedTimetableApi = {
+  getAll: () => api.get('/generated-timetables'),
+  create: (data: any) => api.post('/generated-timetables', data),
+};
+
 export default api; 

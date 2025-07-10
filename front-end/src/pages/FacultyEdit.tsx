@@ -6,7 +6,7 @@ interface Faculty {
   name: string;
   code: string;
   specialization: string;
-  maxHoursPerWeek: number;
+  // maxHoursPerWeek removed
 }
 
 const SPECIALIZATIONS = [
@@ -15,7 +15,9 @@ const SPECIALIZATIONS = [
   'ECE',
   'EEE',
   'CIVIL',
-  'MECH'
+  'MECH',
+  'PLACEMENTS',
+  'SOFTSKILLS',
 ];
 
 const FacultyEdit: React.FC = () => {
@@ -24,7 +26,7 @@ const FacultyEdit: React.FC = () => {
     name: '',
     code: '',
     specialization: 'CSE',
-    maxHoursPerWeek: 40
+    // maxHoursPerWeek removed
   });
 
   useEffect(() => {
@@ -65,7 +67,7 @@ const FacultyEdit: React.FC = () => {
         name: '',
         code: '',
         specialization: 'CSE',
-        maxHoursPerWeek: 40
+        // maxHoursPerWeek removed
       });
       fetchFaculty();
       alert('Faculty added successfully!');
@@ -111,7 +113,7 @@ const FacultyEdit: React.FC = () => {
         
         <form onSubmit={handleSubmit} className="p-6">
           <div className="form-container">
-            <div className="space-y-2">
+            <div className="form-group">
               <label className="form-label">Faculty Name</label>
               <input
                 type="text"
@@ -123,7 +125,7 @@ const FacultyEdit: React.FC = () => {
               />
             </div>
             
-            <div className="space-y-2">
+            <div className="form-group">
               <label className="form-label">Faculty Code</label>
               <input
                 type="text"
@@ -135,7 +137,7 @@ const FacultyEdit: React.FC = () => {
               />
             </div>
             
-            <div className="space-y-2">
+            <div className="form-group">
               <label className="form-label">Specialization</label>
               <select
                 value={formData.specialization}
@@ -149,7 +151,8 @@ const FacultyEdit: React.FC = () => {
               </select>
             </div>
             
-            <div className="space-y-2">
+            {/*
+            <div className="form-group">
               <label className="form-label">Max Hours Per Week</label>
               <input
                 type="number"
@@ -162,6 +165,7 @@ const FacultyEdit: React.FC = () => {
                 className="input-field"
               />
             </div>
+            */}
           </div>
 
           <div className="mt-6">
@@ -188,7 +192,7 @@ const FacultyEdit: React.FC = () => {
             {faculty.map((f) => (
               <div 
                 key={f._id} 
-                className="group relative bg-white rounded-xl border border-gray-100 p-6 hover:shadow-lg hover:shadow-blue-500/5 transition-all duration-300"
+                className="faculty-card group relative bg-white rounded-xl border border-gray-100 p-6 hover:shadow-lg"
               >
                 <div className="flex items-start justify-between">
                   <div>
@@ -200,12 +204,11 @@ const FacultyEdit: React.FC = () => {
                           {f.specialization}
                         </span>
                       </p>
-                      <p className="text-sm text-gray-500">Max Hours: <span className="font-medium text-gray-700">{f.maxHoursPerWeek}</span></p>
                     </div>
                   </div>
                   <button 
                     onClick={() => handleDelete(f._id)}
-                    className="opacity-0 group-hover:opacity-100 p-2 hover:bg-red-50 rounded-lg transition-all duration-300"
+                    className="opacity-0 group-hover:opacity-100 p-2 hover:bg-red-50 rounded-lg transition-all duration-300 hover:scale-110"
                     title="Delete Faculty"
                   >
                     <MdDelete className="text-xl text-red-500" />
