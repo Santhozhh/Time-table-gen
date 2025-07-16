@@ -2,7 +2,7 @@
 
 const mongoose = require('mongoose');
 
-const MONGODB_URI = 'mongodb+srv://ksdsanthosh130:kudos@lms.ze750zk.mongodb.net/timetable_db?retryWrites=true&w=majority&appName=TimeTable';
+const MONGODB_URI = 'mongodb+srv://ksdsanthosh130:kudos@digital-time-table.l6gpsyf.mongodb.net/?retryWrites=true&w=majority&appName=digital-time-table';
 
 const connectDB = async () => {
   try {

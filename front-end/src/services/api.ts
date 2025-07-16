@@ -31,7 +31,9 @@ export const timetableApi = {
 
 export const generatedTimetableApi = {
   getAll: () => api.get('/generated-timetables'),
+  getById: (id: string) => api.get(`/generated-timetables/${id}`),
   create: (data: any) => api.post('/generated-timetables', data),
+  update: (id: string, data: any) => api.put(`/generated-timetables/${id}`, data),
 };
 
 export default api; 

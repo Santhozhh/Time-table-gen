@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MdAdd, MdSchedule, MdSchool, MdCode, MdAccessTime, MdPerson, MdPlayArrow, MdSave, MdDelete } from 'react-icons/md';
+import { MdAdd, MdSchedule, MdSchool,  MdPlayArrow, MdSave, MdDelete } from 'react-icons/md';
 import { generatedTimetableApi } from '../services/api';
 
 interface TimetableForm {
@@ -11,6 +11,7 @@ interface TimetableForm {
   facultyId: string;
   additionalFacultyId?: string;
   section: string;
+  year: number; // 1 – 4
 }
 
 interface Faculty {
@@ -28,7 +29,10 @@ interface TimetableCell {
   additionalFacultyId?: string;
   type: 'theory' | 'practical' | 'theory_practical' | 'one_credit' | 'honors' | 'other';
   section: string;
+  year?: number; // optional for backward compatibility
 }
+
+type TimetableSlot = TimetableCell[]; // NEW – allows multiple entries per period
 
 const MakeTimetable: React.FC = () => {
   const [forms, setForms] = useState<TimetableForm[]>([{
@@ -38,13 +42,13 @@ const MakeTimetable: React.FC = () => {
     hoursPerWeek: 0,
     facultyId: '',
     additionalFacultyId: '',
-    section: 'A'
+    section: 'A',
+    year: 1
   }]);
 
   const [faculty, setFaculty] = useState<Faculty[]>([]);
-  const [timetable, setTimetable] = useState<(TimetableCell | null)[][]>(
-    Array(6).fill(null).map(() => Array(7).fill(null))
-  );
+  const emptyMatrix = () => Array(6).fill(null).map(() => Array(7).fill(null).map(()=>[] as TimetableSlot));
+  const [timetable, setTimetable] = useState<TimetableSlot[][]>(emptyMatrix());
   const [showTimetable, setShowTimetable] = useState(false);
   const [currentFormIndex, setCurrentFormIndex] = useState(0);
   const [unavailable, setUnavailable] = useState<(TimetableCell | null)[][]>(Array(6).fill(null).map(()=>Array(7).fill(null)));
@@ -58,8 +62,10 @@ const MakeTimetable: React.FC = () => {
       data.forEach((tt:any)=>{
         tt.timetable.forEach((dayRow:any, dIdx:number)=>{
           dayRow.forEach((cell:any, pIdx:number)=>{
-            if(cell && (cell.facultyId===facultyId || cell.additionalFacultyId===facultyId)){
-              matrix[dIdx][pIdx]=cell as TimetableCell;
+            const entries:Array<any> = Array.isArray(cell) ? cell : cell ? [cell] : [];
+            const found = entries.find((c)=>c.facultyId===facultyId || c.additionalFacultyId===facultyId);
+            if(found){
+              matrix[dIdx][pIdx]=found as TimetableCell;
             }
           });
         });
@@ -89,9 +95,14 @@ const MakeTimetable: React.FC = () => {
   const handleInputChange = (index: number, e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     const newForms = [...forms];
+    let parsed: any = value;
+    // Convert numeric fields to numbers to maintain consistent types
+    if (name === 'year' || name === 'hoursPerWeek') {
+      parsed = parseInt(value, 10) || 0;
+    }
     newForms[index] = {
       ...newForms[index],
-      [name]: value
+      [name]: parsed
     };
     setForms(newForms);
     if(index===currentFormIndex && (e.target.name==='facultyId')){
@@ -114,7 +125,8 @@ const MakeTimetable: React.FC = () => {
       hoursPerWeek: 0,
       facultyId: '',
       additionalFacultyId: '',
-      section: 'A'
+      section: 'A',
+      year: 3
     }]);
   };
 
@@ -130,34 +142,53 @@ const MakeTimetable: React.FC = () => {
 
   const handleCellClick = (dayIndex: number, periodIndex: number) => {
     const currentForm = forms[currentFormIndex];
-    const currentHours = timetable.flat().filter(cell => 
-      cell?.courseName === currentForm.courseName && 
-      cell?.courseCode === currentForm.courseCode
+
+    // Calculate current allocated hours for this subject (flatten 2 levels)
+    const currentHours = timetable.flat(2).filter(cell => 
+      cell.courseName === currentForm.courseName && 
+      cell.courseCode === currentForm.courseCode &&
+      cell.section === currentForm.section &&
+      cell.year === currentForm.year
     ).length;
 
-    if (unavailable[dayIndex][periodIndex] && !timetable[dayIndex][periodIndex]) {
+    // If faculty already busy elsewhere (unavailable matrix marks first clash)
+    if (unavailable[dayIndex][periodIndex]) {
       alert('Faculty already allocated in another class at this time');
       return;
     }
 
-    if (currentHours >= currentForm.hoursPerWeek && !timetable[dayIndex][periodIndex]) {
+    if (currentHours >= currentForm.hoursPerWeek) {
       alert('All hours for this course have been allocated!');
       return;
     }
 
+    const newEntry: TimetableCell = {
+      courseName: currentForm.courseName,
+      courseCode: currentForm.courseCode,
+      facultyId: currentForm.facultyId,
+      additionalFacultyId: currentForm.additionalFacultyId,
+      type: currentForm.type,
+      section: currentForm.section,
+      year: currentForm.year
+    };
+
     const newTimetable = timetable.map((day, dIdx) =>
-      day.map((cell, pIdx) => {
+      day.map((slot, pIdx) => {
         if (dIdx === dayIndex && pIdx === periodIndex) {
-          return cell ? null : {
-            courseName: currentForm.courseName,
-            courseCode: currentForm.courseCode,
-            facultyId: currentForm.facultyId,
-            additionalFacultyId: currentForm.additionalFacultyId,
-            type: currentForm.type,
-            section: currentForm.section
-          };
+          // Toggle behaviour: if the exact entry exists, remove it, else add.
+          const existsIdx = slot.findIndex(s => 
+            s.courseCode === newEntry.courseCode &&
+            s.section === newEntry.section &&
+            s.year === newEntry.year
+          );
+          if (existsIdx >= 0) {
+            const cloned = [...slot];
+            cloned.splice(existsIdx,1);
+            return cloned;
+          }
+          return [...slot, newEntry];
         }
-        return cell;
+        return slot;
       })
     );
 
@@ -300,7 +331,7 @@ const MakeTimetable: React.FC = () => {
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Faculty</label>
+                    <label className="form-label">{form.type==='honors' ? 'Ordinary Faculty' : 'Faculty'}</label>
                     <select
                       name="facultyId"
                       value={form.facultyId}
@@ -317,15 +348,22 @@ const MakeTimetable: React.FC = () => {
                     </select>
                   </div>
 
-                  {(form.type==='practical' || form.type==='theory_practical') && (
+                  {(form.type==='practical' || form.type==='theory_practical' || form.type==='honors') && (
                     <div className="form-group">
-                      <label className="form-label">Additional Faculty (Practical)</label>
+                      <label className="form-label">{form.type==='honors' ? 'Honors Faculty' : 'Additional Faculty (Practical)'}</label>
                       <select name="additionalFacultyId" value={form.additionalFacultyId} onChange={(e)=>handleInputChange(index,e)} required className="input-field">
                         <option value="">Select Faculty</option>
                         {faculty.map(f=>(<option key={f._id} value={f._id}>{f.name} ({f.code})</option>))}
                       </select>
                     </div>
                   )}
+
+                  <div className="form-group">
+                    <label className="form-label">Year</label>
+                    <select name="year" value={form.year} onChange={(e)=>handleInputChange(index,e)} className="input-field">
+                      {[1,2,3,4].map(y=>(<option key={y} value={y}>{y}</option>))}
+                    </select>
+                  </div>
 
                   <div className="form-group">
                     <label className="form-label">Section</label>
@@ -372,7 +410,7 @@ const MakeTimetable: React.FC = () => {
                 className="btn-secondary bg-white/90 hover:bg-white"
               >
                 <MdSave className="text-xl" />
-                Generate & Save
+                Generate Timetable
               </button>
             </div>
           </div>
@@ -381,35 +419,75 @@ const MakeTimetable: React.FC = () => {
             <table className="w-full border-collapse">
               <thead>
                 <tr>
-                  <th className="table-header">Day/Period</th>
-                  {Array(7).fill(null).map((_, i) => (
-                    <th key={i} className="table-header">
-                      Period {i + 1}
-                    </th>
+                  <th rowSpan={2} className="table-header align-middle">Day / Period</th>
+                  {/* Header cells with breaks */}
+                  {[
+                    {type:'period',label:'Period 1'},
+                    {type:'period',label:'Period 2'},
+                    {type:'break',label:'Tea Break'},
+                    {type:'period',label:'Period 3'},
+                    {type:'period',label:'Period 4'},
+                    {type:'break',label:'Lunch'},
+                    {type:'period',label:'Period 5'},
+                    {type:'period',label:'Period 6'},
+                    {type:'period',label:'Period 7'},
+                  ].map((h,i)=>(
+                    <th key={i} className={`table-header ${h.type==='break' ? 'bg-gray-50 text-gray-500 font-medium italic' : ''}`}>{h.label}</th>
+                  ))}
+                </tr>
+                <tr>
+                  {[
+                    '09:00 – 09:50',
+                    '09:50 – 10:40',
+                    '',
+                    '11:00 – 11:50',
+                    '11:50 – 12:40',
+                    '',
+                    '01:20 – 02:10',
+                    '02:10 – 03:00',
+                    '03:20 – 04:10'
+                  ].map((t,i)=>(
+                    <th key={i} className="table-header text-xs font-normal">{t}</th>
                   ))}
                 </tr>
               </thead>
-              <tbody>
-                {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map((day, dayIndex) => (
-                  <tr key={day}>
-                    <td className="table-header">{day}</td>
-                    {Array(7).fill(null).map((_, periodIndex) => {
-                      const cell = timetable[dayIndex][periodIndex];
-                      return (
-                        <td
-                          key={periodIndex}
-                          onClick={() => handleCellClick(dayIndex, periodIndex)}
-                          onDragOver={handleDragOver}
-                          onDrop={(e)=>handleDrop(dayIndex, periodIndex, e)}
-                          className={`table-cell-interactive ${cell ? 'bg-blue-50/50' : unavailable[dayIndex][periodIndex] ? 'bg-red-50/60 cursor-not-allowed' : 'bg-white'}`}
-                        >
-                          {cell ? (
+               <tbody>
+                 {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map((day, dayIndex) => (
+                   <tr key={day}>
+                     <td className="table-header">{day}</td>
+                     {/* Iterate through 9 columns (periods + breaks) */}
+                     {Array(9).fill(null).map((_, colIdx) => {
+                       // Break columns (index 2 and 5)
+                       if (colIdx === 2) {
+                         return <td key={colIdx} className="table-cell bg-gray-50 text-center italic text-sm">Tea Break</td>;
+                       }
+                       if (colIdx === 5) {
+                         return <td key={colIdx} className="table-cell bg-gray-50 text-center italic text-sm">Lunch</td>;
+                       }
+
+                       // Map colIdx to matrix period index (skip break positions)
+                       const periodIndex = colIdx > 5 ? colIdx - 2 : colIdx > 2 ? colIdx - 1 : colIdx;
+                       const slot = timetable[dayIndex][periodIndex];
+
+                       return (
+                         <td
+                           key={colIdx}
+                           onClick={() => handleCellClick(dayIndex, periodIndex)}
+                           onDragOver={handleDragOver}
+                           onDrop={(e)=>handleDrop(dayIndex, periodIndex, e)}
+                           className={`table-cell-interactive ${slot.length ? 'bg-blue-50/50' : unavailable[dayIndex][periodIndex] ? 'bg-red-50/60 cursor-not-allowed' : 'bg-white'}`}
+                         >
+                           {slot.length ? (
                             <div className="space-y-1">
-                              <div className="font-medium text-gray-800">{cell.courseName}</div>
-                              <div className="text-sm text-[#4169E1]">{cell.courseCode}</div>
-                              <div className="text-xs text-gray-500">
-                                {[cell.facultyId, cell.additionalFacultyId].filter(Boolean).map(id=>faculty.find(f=>f._id===id)?.name).filter(Boolean).join(', ')} - Section {cell.section}
-                              </div>
+                              {slot.map((sub,idx)=>(
+                                <div key={idx} className="border-b last:border-none pb-1 mb-1 last:pb-0 last:mb-0">
+                                  <div className="font-medium text-gray-800">{sub.courseName}</div>
+                                  <div className="text-sm text-[#4169E1]">{sub.courseCode}</div>
+                                  <div className="text-xs text-gray-500">
+                                    {[sub.facultyId, sub.additionalFacultyId].filter(Boolean).map(id=>faculty.find(f=>f._id===id)?.name).filter(Boolean).join(', ')} - Sec {sub.year}{sub.section}
+                                  </div>
+                                </div>
+                              ))}
                             </div>
                           ) : (
                             unavailable[dayIndex][periodIndex] && (
@@ -420,12 +498,12 @@ const MakeTimetable: React.FC = () => {
                               </div>
                             )
                           )}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
-              </tbody>
+                         </td>
+                       );
+                     })}
+                   </tr>
+                 ))}
+               </tbody>
             </table>
           </div>
 
@@ -447,7 +525,7 @@ const MakeTimetable: React.FC = () => {
                       <p className="text-sm text-blue-600">{subj.courseCode}</p>
                     </div>
                     <div className="text-sm text-gray-500 capitalize">{subj.type}</div>
-                    <div className="text-xs text-gray-500">Section: {subj.section}</div>
+                    <div className="text-xs text-gray-500">Year {subj.year} • Sec {subj.section}</div>
                   </li>
                 ))}
               </ul>

@@ -6,10 +6,13 @@ const facultySchema = new mongoose.Schema({
     required: true,
     trim: true
   },
+  grade: {
+    type: String,
+    enum: ['Professor','Associate Professor','Assistant Professor I','Assistant Professor II','Assistant Professor III'],
+    default: 'Assistant Professor I'
+  },
   code: {
     type: String,
-    required: true,
-    unique: true,
     trim: true
   },
   specialization: {
@@ -18,7 +21,7 @@ const facultySchema = new mongoose.Schema({
   },
   maxHoursPerWeek: {
     type: Number,
-    default: 40
+    default: 42
   },
   active: {
     type: Boolean,

@@ -23,14 +23,17 @@ exports.getFaculty = async (req, res) => {
   }
 };
 
-// Create a new faculty member
+// Create a new faculty mem ber
 exports.createFaculty = async (req, res) => {
-  const faculty = new Faculty({
+  const facultyPayload = {
     name: req.body.name,
-    code: req.body.code,
+    grade: req.body.grade,
     specialization: req.body.specialization,
-    maxHoursPerWeek: req.body.maxHoursPerWeek
-  });
+    maxHoursPerWeek: req.body.maxHoursPerWeek,
+  };
+  if (req.body.code) facultyPayload.code = req.body.code; // include only if provided
+
+  const faculty = new Faculty(facultyPayload);
 
   try {
     const newFaculty = await faculty.save();
