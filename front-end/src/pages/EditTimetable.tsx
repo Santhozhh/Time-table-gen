@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { MdAdd, MdSchedule, MdSchool, MdSave, MdDelete } from 'react-icons/md';
+import { MdAdd, MdSchedule, MdSchool, MdSave, MdDelete, MdChevronLeft, MdChevronRight } from 'react-icons/md';
 import { MdClass } from 'react-icons/md';
 import { generatedTimetableApi } from '../services/api';
 
@@ -20,6 +20,7 @@ interface Faculty {
   code: string;
   specialization: string;
   maxHoursPerWeek: number;
+  grade?: string; // Added for new faculty selection
 }
 interface TimetableCell {
   courseName: string;
@@ -38,6 +39,10 @@ const EditTimetable: React.FC = () => {
   const navigate = useNavigate();
 
   const [forms, setForms] = useState<TimetableForm[]>([]);
+  const [fixedYear,setFixedYear]=useState<number>(1);
+  const [fixedSection,setFixedSection]=useState<string>('A');
+  // index for timetable navigation (reuse if needed later)
+  const [listCollapsed,setListCollapsed]=useState(false);
   const emptyMatrix = () => Array(6).fill(null).map(() => Array(7).fill(null).map(() => [] as TimetableSlot));
   const [timetable, setTimetable] = useState<TimetableSlot[][]>(emptyMatrix());
   const [faculty, setFaculty] = useState<Faculty[]>([]);
@@ -52,7 +57,12 @@ const EditTimetable: React.FC = () => {
         setFaculty(await facRes.json());
         if (id) {
           const { data } = await generatedTimetableApi.getById(id);
-          setForms(data.courses || []);
+          const courseList = data.courses||[];
+          setForms(courseList);
+          if(courseList.length){
+             setFixedYear(courseList[0].year||1);
+             setFixedSection(courseList[0].section||'A');
+          }
           setTimetable(data.timetable || emptyMatrix());
         }
       } catch (err) {
@@ -67,7 +77,9 @@ const EditTimetable: React.FC = () => {
   const handleInputChange = (index: number, e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     const newForms = [...forms];
-    newForms[index] = { ...newForms[index], [name]: value } as TimetableForm;
+    let parsed: any = value;
+    if(name==='hoursPerWeek' || name==='year') parsed = parseInt(value,10)||0;
+    newForms[index] = { ...newForms[index], [name]: parsed } as TimetableForm;
     setForms(newForms);
   };
 
@@ -81,8 +93,8 @@ const EditTimetable: React.FC = () => {
         hoursPerWeek: 0,
         facultyId: '',
         additionalFacultyId: '',
-        section: 'A',
-        year: 3,
+        section: fixedSection,
+        year: fixedYear,
       },
     ]);
   };
@@ -180,37 +192,42 @@ const EditTimetable: React.FC = () => {
                   <input name="courseCode" value={form.courseCode} onChange={(e) => handleInputChange(idx, e)} className="input-field" />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Faculty</label>
+                  <label className="form-label">Type</label>
+                  <select name="type" value={form.type} onChange={(e)=>handleInputChange(idx,e)} className="input-field">
+                    <option value="theory">Theory</option>
+                    <option value="practical">Practical</option>
+                    <option value="theory_practical">Theory + Practical</option>
+                    <option value="one_credit">One Credit</option>
+                    <option value="honors">Honors</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Hours per Week</label>
+                  <input type="number" name="hoursPerWeek" min="1" max="42" value={form.hoursPerWeek} onChange={(e)=>handleInputChange(idx,e)} className="input-field" />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">{form.type==='honors'?'Ordinary Faculty':'Faculty'}</label>
                   <select name="facultyId" value={form.facultyId} onChange={(e) => handleInputChange(idx, e)} className="input-field">
                     <option value="">Select</option>
                     {faculty.map((f) => (
                       <option key={f._id} value={f._id}>
-                        {f.name} ({f.code})
+                        {f.name} {f.grade?`(${f.grade})`:''}
                       </option>
                     ))}
                   </select>
                 </div>
-                <div className="form-group">
-                  <label className="form-label">Year</label>
-                  <select name="year" value={form.year} onChange={(e) => handleInputChange(idx, e)} className="input-field">
-                    {[1, 2, 3, 4].map((y) => (
-                      <option key={y} value={y}>
-                        {y}
-                      </option>
-                    ))}
-                  </select>
+                {(form.type==='practical' || form.type==='theory_practical' || form.type==='honors') && (
+                  <div className="form-group">
+                    <label className="form-label">{form.type==='honors'?'Honors Faculty':'Additional Faculty (Practical)'}</label>
+                    <select name="additionalFacultyId" value={form.additionalFacultyId} onChange={(e)=>handleInputChange(idx,e)} className="input-field">
+                      <option value="">Select</option>
+                      {faculty.map(f=>(<option key={f._id} value={f._id}>{f.name} {f.grade?`(${f.grade})`:''}</option>))}
+                    </select>
+                  </div>
+                )}
+                {/* Year & Section are fixed for this timetable */}
                 </div>
-                <div className="form-group">
-                  <label className="form-label">Section</label>
-                  <select name="section" value={form.section} onChange={(e) => handleInputChange(idx, e)} className="input-field">
-                    {['A', 'B', 'C'].map((sec) => (
-                      <option key={sec} value={sec}>
-                        {sec}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
             </div>
           ))}
           <button type="button" onClick={addSubject} className="btn-primary">
@@ -223,18 +240,24 @@ const EditTimetable: React.FC = () => {
             <table className="min-w-full border-collapse">
               <thead>
                 <tr>
-                  <th className="table-header">Day/Period</th>
-                  {Array.from({length:7}).map((_,i)=>(<th key={i} className="table-header">{i+1}</th>))}
+                  <th rowSpan={2} className="table-header align-middle">Day / Period</th>
+                  {[{type:'period',label:'Period 1'},{type:'period',label:'Period 2'},{type:'break',label:'Tea Break'},{type:'period',label:'Period 3'},{type:'period',label:'Period 4'},{type:'break',label:'Lunch'},{type:'period',label:'Period 5'},{type:'period',label:'Period 6'},{type:'period',label:'Period 7'}].map((h,i)=>(<th key={i} className={`table-header ${h.type==='break'?'bg-gray-50 text-gray-500 italic':''}`}>{h.label}</th>))}
+                </tr>
+                <tr>
+                  {['09:00 – 09:50','09:50 – 10:40','','11:00 – 11:50','11:50 – 12:40','','01:20 – 02:10','02:10 – 03:00','03:20 – 04:10'].map((t,i)=>(<th key={i} className="table-header text-xs font-normal">{t}</th>))}
                 </tr>
               </thead>
               <tbody>
-                {days.map((day, dIdx)=>(
+                {days.map((day,dIdx)=>(
                   <tr key={day}>
                     <td className="table-header">{day}</td>
-                    {Array.from({length:7}).map((_,pIdx)=>{
-                      const slot = timetable[dIdx]?.[pIdx] || [];
+                    {Array(9).fill(null).map((_,colIdx)=>{
+                      if(colIdx===2) return <td key={colIdx} className="table-cell bg-gray-50 text-center italic text-sm">Tea Break</td>;
+                      if(colIdx===5) return <td key={colIdx} className="table-cell bg-gray-50 text-center italic text-sm">Lunch</td>;
+                      const periodIdx = colIdx>5 ? colIdx-2 : colIdx>2 ? colIdx-1 : colIdx;
+                      const slot = timetable[dIdx]?.[periodIdx] || [];
                       return (
-                        <td key={pIdx} className="table-cell cursor-pointer" onClick={()=>handleCellClick(dIdx,pIdx)}>
+                        <td key={colIdx} className="table-cell cursor-pointer" onClick={()=>handleCellClick(dIdx,periodIdx)}>
                           {slot.map((s,idx)=>(
                             <div key={idx} className="space-y-1">
                               <div className="font-medium text-gray-800 text-xs">{s.courseName}</div>

@@ -20,6 +20,7 @@ interface Faculty {
   code: string;
   specialization: string;
   maxHoursPerWeek: number;
+  grade?: string; // Added grade property
 }
 
 interface TimetableCell {
@@ -342,7 +343,7 @@ const MakeTimetable: React.FC = () => {
                       <option value="">Select Faculty</option>
                       {faculty.map((f) => (
                         <option key={f._id} value={f._id}>
-                          {f.name} ({f.code})
+                          {f.name} {f.grade ? `(${f.grade})` : ''}
                         </option>
                       ))}
                     </select>
@@ -353,7 +354,7 @@ const MakeTimetable: React.FC = () => {
                       <label className="form-label">{form.type==='honors' ? 'Honors Faculty' : 'Additional Faculty (Practical)'}</label>
                       <select name="additionalFacultyId" value={form.additionalFacultyId} onChange={(e)=>handleInputChange(index,e)} required className="input-field">
                         <option value="">Select Faculty</option>
-                        {faculty.map(f=>(<option key={f._id} value={f._id}>{f.name} ({f.code})</option>))}
+                        {faculty.map(f=>(<option key={f._id} value={f._id}>{f.name} {f.grade ? `(${f.grade})` : ''}</option>))}
                       </select>
                     </div>
                   )}

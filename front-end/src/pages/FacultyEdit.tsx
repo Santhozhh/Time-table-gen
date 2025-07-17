@@ -211,13 +211,13 @@ const FacultyEdit: React.FC = () => {
                     >
                       <MdEdit className="text-xl text-blue-500"/>
                     </button>
-                    <button 
-                      onClick={() => handleDelete(f._id)}
+                  <button 
+                    onClick={() => handleDelete(f._id)}
                       className="p-2 hover:bg-red-50 rounded-lg hover:scale-110"
                       title="Delete"
-                    >
-                      <MdDelete className="text-xl text-red-500" />
-                    </button>
+                  >
+                    <MdDelete className="text-xl text-red-500" />
+                  </button>
                   </div>
                 </div>
               </div>

@@ -32,7 +32,7 @@ const ViewFacultyTimetables: React.FC = () => {
   const [selectedFaculty, setSelectedFaculty] = useState<Faculty | null>(null);
   const [matrix, setMatrix] = useState<(TimetableCell | null)[][]>(Array(6).fill(null).map(() => Array(7).fill(null)));
   const [allTimetables, setAllTimetables] = useState<GeneratedTimetable[]>([]);
-  const [allocatedCount, setAllocatedCount] = useState(0);
+  // removed allocatedCount state; compute on render
   const [loading, setLoading] = useState(true);
   const [listCollapsed, setListCollapsed] = useState(false);
 
@@ -73,9 +73,7 @@ const ViewFacultyTimetables: React.FC = () => {
                 return match || null;
               }));
               setMatrix(filtered);
-              // count allocated
-              const count = filtered.flat().filter(Boolean).length;
-              setAllocatedCount(count);
+              // no need to set state here
               setLoading(false);
               return;
             }
@@ -146,14 +144,14 @@ const ViewFacultyTimetables: React.FC = () => {
                   const limit = typeof f.maxHoursPerWeek==='number' ? f.maxHoursPerWeek : 42;
                   const free = Math.max(limit - allocated,0);
                   return (
-                    <button
-                      key={f._id}
-                      onClick={() => setSelectedFaculty(f)}
-                      className={`w-full flex items-center gap-3 p-4 border rounded-lg text-left hover:bg-gray-50 ${selectedFaculty?._id===f._id?'border-blue-600 bg-blue-50':''}`}
-                    >
-                      <MdPerson className="text-2xl text-blue-600" />
+            <button
+              key={f._id}
+              onClick={() => setSelectedFaculty(f)}
+              className={`w-full flex items-center gap-3 p-4 border rounded-lg text-left hover:bg-gray-50 ${selectedFaculty?._id===f._id?'border-blue-600 bg-blue-50':''}`}
+            >
+              <MdPerson className="text-2xl text-blue-600" />
                       <div className="flex-1">
-                        <p className="font-medium text-gray-800">{f.name}</p>
+                <p className="font-medium text-gray-800">{f.name}</p>
                         <p className="text-xs text-gray-500">{f.grade}</p>
                       </div>
                       <div className="flex flex-col items-end text-xs font-medium gap-1">
@@ -181,14 +179,12 @@ const ViewFacultyTimetables: React.FC = () => {
             <div className="space-y-4">
               <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-4">
                 Timetable for {selectedFaculty.name}
-                <span className="text-sm font-medium text-indigo-700 bg-indigo-50 px-3 py-1 rounded-full">
-                  Allocated: {allocatedCount}
-                </span>
-                {selectedFaculty.maxHoursPerWeek && (
-                  <span className="text-sm font-medium text-green-700 bg-green-50 px-3 py-1 rounded-full">
-                    Free: {Math.max(selectedFaculty.maxHoursPerWeek - allocatedCount,0)}
-                  </span>
-                )}
+                {(()=>{const alloc=getAllocatedCount(selectedFaculty._id);return (
+                  <>
+                    <span className="text-sm font-medium text-indigo-700 bg-indigo-50 px-3 py-1 rounded-full">Allocated: {alloc}</span>
+                    {selectedFaculty.maxHoursPerWeek && <span className="text-sm font-medium text-green-700 bg-green-50 px-3 py-1 rounded-full">Free: {Math.max(selectedFaculty.maxHoursPerWeek-alloc,0)}</span>}
+                  </>
+                );})()}
               </h3>
               <table className="w-full border-collapse">
                 <thead>

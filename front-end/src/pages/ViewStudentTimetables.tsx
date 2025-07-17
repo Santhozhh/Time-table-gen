@@ -105,9 +105,9 @@ const ViewStudentTimetables: React.FC = () => {
           const match=entries.find(c=>Number(c.year)===selectedYS.year && c.section===selectedYS.section);
           return match||null;
        }));
-       setMatrix(filtered);
-       setSelectedTimetable(tt);
-       return;
+        setMatrix(filtered);
+        setSelectedTimetable(tt);
+        return;
     }
     // Not found
     setMatrix(Array(6).fill(null).map(() => Array(7).fill(null)));
@@ -245,7 +245,7 @@ const ViewStudentTimetables: React.FC = () => {
                     <tr>
                       {['09:00 – 09:50','09:50 – 10:40','','11:00 – 11:50','11:50 – 12:40','','01:20 – 02:10','02:10 – 03:00','03:20 – 04:10'].map((t,i)=>(
                         <th key={i} className="table-header text-xs font-normal">{t}</th>
-                      ))}
+                        ))}
                     </tr>
                   </thead>
                   <tbody>
