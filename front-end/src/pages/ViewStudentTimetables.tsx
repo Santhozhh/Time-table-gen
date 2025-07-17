@@ -228,22 +228,12 @@ const ViewStudentTimetables: React.FC = () => {
                   <thead>
                     <tr>
                       <th rowSpan={2} className="table-header align-middle">Day / Period</th>
-                      {[
-                        {type:'period',label:'Period 1'},
-                        {type:'period',label:'Period 2'},
-                        {type:'break',label:'Tea Break'},
-                        {type:'period',label:'Period 3'},
-                        {type:'period',label:'Period 4'},
-                        {type:'break',label:'Lunch'},
-                        {type:'period',label:'Period 5'},
-                        {type:'period',label:'Period 6'},
-                        {type:'period',label:'Period 7'},
-                      ].map((h,i)=>(
+                      {[{type:'period',label:'Period 1'},{type:'period',label:'Period 2'},{type:'break',label:'Tea Break'},{type:'period',label:'Period 3'},{type:'period',label:'Period 4'},{type:'break',label:'Lunch'},{type:'period',label:'Period 5'},{type:'period',label:'Period 6'},{type:'break',label:'Tea Break'},{type:'period',label:'Period 7'}].map((h,i)=>(
                         <th key={i} className={`table-header ${h.type==='break'?'bg-gray-50 text-gray-500 italic':''}`}>{h.label}</th>
                       ))}
                     </tr>
                     <tr>
-                      {['09:00 – 09:50','09:50 – 10:40','','11:00 – 11:50','11:50 – 12:40','','01:20 – 02:10','02:10 – 03:00','03:20 – 04:10'].map((t,i)=>(
+                      {['09:00 – 09:50','09:50 – 10:40','','11:00 – 11:50','11:50 – 12:40','','01:20 – 02:10','02:10 – 03:00','','03:20 – 04:10'].map((t,i)=>(
                         <th key={i} className="table-header text-xs font-normal">{t}</th>
                         ))}
                     </tr>
@@ -252,10 +242,14 @@ const ViewStudentTimetables: React.FC = () => {
                     {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"].map((day, dIdx) => (
                       <tr key={day}>
                         <td className="table-header">{day}</td>
-                        {Array(9).fill(null).map((_, colIdx)=>{
-                          if(colIdx===2) return <td key={colIdx} className="table-cell bg-gray-50 text-center italic text-sm">Tea Break</td>;
+                        {Array(10).fill(null).map((_, colIdx)=>{
+                          if(colIdx===2 || colIdx===8) return <td key={colIdx} className="table-cell bg-gray-50 text-center italic text-sm">Tea Break</td>;
                           if(colIdx===5) return <td key={colIdx} className="table-cell bg-gray-50 text-center italic text-sm">Lunch</td>;
-                          const periodIndex = colIdx>5 ? colIdx-2 : colIdx>2 ? colIdx-1 : colIdx;
+                          let periodIndex:number;
+                          if(colIdx<2) periodIndex=colIdx;
+                          else if(colIdx<5) periodIndex=colIdx-1;
+                          else if(colIdx<8) periodIndex=colIdx-2;
+                          else periodIndex=6;
                           return (
                             <td key={colIdx} className="table-cell">
                               {getCellContent(dIdx, periodIndex)}

@@ -171,6 +171,10 @@ const EditTimetable: React.FC = () => {
 
   if (loading) return <p>Loading...</p>;
 
+  const totalPeriods = 42; // 6 days * 7 teaching periods
+  const allocatedTotal = timetable.flat(2).filter(Boolean).length;
+  const freePeriods = totalPeriods - allocatedTotal;
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="card">
@@ -222,7 +226,8 @@ const EditTimetable: React.FC = () => {
                 </div>
                 <div className="form-group">
                   <label className="form-label">Hours per Week</label>
-                  <input type="number" name="hoursPerWeek" min="1" max="42" value={form.hoursPerWeek} onChange={(e)=>handleInputChange(idx,e)} className="input-field" />
+                  <input type="number" name="hoursPerWeek" min="1" max={freePeriods} value={form.hoursPerWeek} onChange={(e)=>handleInputChange(idx,e)} className="input-field" />
+                  <p className="text-xs text-gray-500 mt-1">Free periods available: {freePeriods}</p>
                 </div>
                 <div className="form-group">
                   <label className="form-label">{form.type==='honors'?'Ordinary Faculty':'Faculty'}</label>
@@ -236,16 +241,16 @@ const EditTimetable: React.FC = () => {
                   </select>
                 </div>
                 {(form.type==='practical' || form.type==='theory_practical' || form.type==='honors') && (
-                  <div className="form-group">
+                <div className="form-group">
                     <label className="form-label">{form.type==='honors'?'Honors Faculty':'Additional Faculty (Practical)'}</label>
                     <select name="additionalFacultyId" value={form.additionalFacultyId} onChange={(e)=>handleInputChange(idx,e)} className="input-field">
                       <option value="">Select</option>
                       {faculty.map(f=>(<option key={f._id} value={f._id}>{f.name} {f.grade?`(${f.grade})`:''}</option>))}
-                    </select>
-                  </div>
+                  </select>
+                </div>
                 )}
                 {/* Year & Section are fixed for this timetable */}
-                </div>
+              </div>
             </div>
           ))}
           <button type="button" onClick={addSubject} className="btn-primary">
@@ -259,20 +264,24 @@ const EditTimetable: React.FC = () => {
               <thead>
                 <tr>
                   <th rowSpan={2} className="table-header align-middle">Day / Period</th>
-                  {[{type:'period',label:'Period 1'},{type:'period',label:'Period 2'},{type:'break',label:'Tea Break'},{type:'period',label:'Period 3'},{type:'period',label:'Period 4'},{type:'break',label:'Lunch'},{type:'period',label:'Period 5'},{type:'period',label:'Period 6'},{type:'period',label:'Period 7'}].map((h,i)=>(<th key={i} className={`table-header ${h.type==='break'?'bg-gray-50 text-gray-500 italic':''}`}>{h.label}</th>))}
+                  {[{type:'period',label:'Period 1'},{type:'period',label:'Period 2'},{type:'break',label:'Tea Break'},{type:'period',label:'Period 3'},{type:'period',label:'Period 4'},{type:'break',label:'Lunch'},{type:'period',label:'Period 5'},{type:'period',label:'Period 6'},{type:'break',label:'Tea Break'},{type:'period',label:'Period 7'}].map((h,i)=>(<th key={i} className={`table-header ${h.type==='break'?'bg-gray-50 text-gray-500 italic':''}`}>{h.label}</th>))}
                 </tr>
                 <tr>
-                  {['09:00 – 09:50','09:50 – 10:40','','11:00 – 11:50','11:50 – 12:40','','01:20 – 02:10','02:10 – 03:00','03:20 – 04:10'].map((t,i)=>(<th key={i} className="table-header text-xs font-normal">{t}</th>))}
+                  {['09:00 – 09:50','09:50 – 10:40','','11:00 – 11:50','11:50 – 12:40','','01:20 – 02:10','02:10 – 03:00','','03:20 – 04:10'].map((t,i)=>(<th key={i} className="table-header text-xs font-normal">{t}</th>))}
                 </tr>
               </thead>
               <tbody>
                 {days.map((day,dIdx)=>(
                   <tr key={day}>
                     <td className="table-header">{day}</td>
-                    {Array(9).fill(null).map((_,colIdx)=>{
-                      if(colIdx===2) return <td key={colIdx} className="table-cell bg-gray-50 text-center italic text-sm">Tea Break</td>;
+                    {Array(10).fill(null).map((_,colIdx)=>{
+                      if(colIdx===2 || colIdx===8) return <td key={colIdx} className="table-cell bg-gray-50 text-center italic text-sm">Tea Break</td>;
                       if(colIdx===5) return <td key={colIdx} className="table-cell bg-gray-50 text-center italic text-sm">Lunch</td>;
-                      const periodIdx = colIdx>5 ? colIdx-2 : colIdx>2 ? colIdx-1 : colIdx;
+                      let periodIdx:number;
+                      if(colIdx<2) periodIdx=colIdx;
+                      else if(colIdx<5) periodIdx=colIdx-1;
+                      else if(colIdx<8) periodIdx=colIdx-2;
+                      else periodIdx=6;
                       const slot = timetable[dIdx]?.[periodIdx] || [];
                       return (
                         <td key={colIdx} className="table-cell cursor-pointer" onClick={()=>handleCellClick(dIdx,periodIdx)} onDragOver={handleDragOver} onDrop={(e)=>handleDrop(dIdx,periodIdx,e)}>

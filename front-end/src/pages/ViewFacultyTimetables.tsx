@@ -19,6 +19,7 @@ interface TimetableCell {
   facultyId: string;
   type: string;
   additionalFacultyId?: string;
+  year?: number; // Added year field
 }
 
 interface GeneratedTimetable {
@@ -35,6 +36,7 @@ const ViewFacultyTimetables: React.FC = () => {
   // removed allocatedCount state; compute on render
   const [loading, setLoading] = useState(true);
   const [listCollapsed, setListCollapsed] = useState(false);
+  const [allocatedCount,setAllocatedCount]=useState(0);
 
   useEffect(() => {
     const fetchFaculty = async () => {
@@ -54,40 +56,23 @@ const ViewFacultyTimetables: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (selectedFaculty) {
-      const fetchTimetables = async () => {
-        try {
-          const timetables: GeneratedTimetable[] = allTimetables;
-          // find latest timetable that includes faculty
-          for (const tt of timetables) {
-            const found = tt.timetable.some(day => day.some(slot => {
-              if(!slot) return false;
-              const entries = Array.isArray(slot) ? slot : [slot];
-              return entries.some(cell => cell && (cell.facultyId === selectedFaculty._id || cell.additionalFacultyId === selectedFaculty._id));
-            }));
-            if (found) {
-              const filtered = tt.timetable.map((dayRow)=> dayRow.map((slot)=>{
-                if(!slot) return null;
-                const entries = Array.isArray(slot) ? slot : [slot];
-                const match = entries.find(cell=> cell && (cell.facultyId===selectedFaculty._id || cell.additionalFacultyId===selectedFaculty._id));
-                return match || null;
-              }));
-              setMatrix(filtered);
-              // no need to set state here
-              setLoading(false);
-              return;
-            }
-          }
-          // if none found
-          setMatrix(Array(6).fill(null).map(() => Array(7).fill(null)));
-          setLoading(false);
-        } catch (err) {
-          console.error('Failed to fetch timetables', err);
+    if(selectedFaculty){
+      const combined:Array<Array<TimetableCell|null>> = Array(6).fill(null).map(()=>Array(7).fill(null));
+      allTimetables.forEach(tt=>{
+        tt.timetable.forEach((dayRow,dIdx)=>{
+          dayRow.forEach((slot,pIdx)=>{
+            if(combined[dIdx][pIdx]) return; // already filled
+            if(!slot) return;
+            const entries=Array.isArray(slot)?slot:[slot];
+            const match=entries.find(cell=>cell && (cell.facultyId===selectedFaculty._id || cell.additionalFacultyId===selectedFaculty._id));
+            if(match) combined[dIdx][pIdx]=match as TimetableCell;
+          });
+        });
+      });
+      setMatrix(combined);
+      setAllocatedCount(combined.flat().filter(Boolean).length);
           setLoading(false);
         }
-      };
-      fetchTimetables();
-    }
   }, [selectedFaculty, allTimetables]);
 
   // helper to count allocated slots for a faculty across all timetables
@@ -115,7 +100,7 @@ const ViewFacultyTimetables: React.FC = () => {
       <div className="space-y-1">
         <div className="font-medium text-gray-800">{cell.courseName}</div>
         <div className="text-sm text-blue-600">{cell.courseCode}</div>
-        <div className="text-xs text-gray-500">Sec {cell.section}</div>
+        <div className="text-xs text-gray-500">Year {cell.year ?? '-'} • Sec {cell.section}</div>
       </div>
     );
   };
@@ -178,34 +163,22 @@ const ViewFacultyTimetables: React.FC = () => {
           {!loading && selectedFaculty && (
             <div className="space-y-4">
               <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-4">
+                
                 Timetable for {selectedFaculty.name}
-                {(()=>{const alloc=getAllocatedCount(selectedFaculty._id);return (
-                  <>
-                    <span className="text-sm font-medium text-indigo-700 bg-indigo-50 px-3 py-1 rounded-full">Allocated: {alloc}</span>
-                    {selectedFaculty.maxHoursPerWeek && <span className="text-sm font-medium text-green-700 bg-green-50 px-3 py-1 rounded-full">Free: {Math.max(selectedFaculty.maxHoursPerWeek-alloc,0)}</span>}
-                  </>
-                );})()}
+                <span className="text-sm font-medium text-indigo-700 bg-indigo-50 px-3 py-1 rounded-full">Allocated: {allocatedCount}</span>
+                {selectedFaculty.maxHoursPerWeek && <span className="text-sm font-medium text-green-700 bg-green-50 px-3 py-1 rounded-full">Free: {Math.max(selectedFaculty.maxHoursPerWeek-allocatedCount,0)}</span>}
+                
               </h3>
               <table className="w-full border-collapse">
                 <thead>
                   <tr>
                     <th rowSpan={2} className="table-header align-middle">Day / Period</th>
-                    {[
-                      {type:'period',label:'Period 1'},
-                      {type:'period',label:'Period 2'},
-                      {type:'break',label:'Tea Break'},
-                      {type:'period',label:'Period 3'},
-                      {type:'period',label:'Period 4'},
-                      {type:'break',label:'Lunch'},
-                      {type:'period',label:'Period 5'},
-                      {type:'period',label:'Period 6'},
-                      {type:'period',label:'Period 7'},
-                    ].map((h,i)=>(
+                    {[{type:'period',label:'Period 1'},{type:'period',label:'Period 2'},{type:'break',label:'Tea Break'},{type:'period',label:'Period 3'},{type:'period',label:'Period 4'},{type:'break',label:'Lunch'},{type:'period',label:'Period 5'},{type:'period',label:'Period 6'},{type:'break',label:'Tea Break'},{type:'period',label:'Period 7'}].map((h,i)=>(
                       <th key={i} className={`table-header ${h.type==='break'?'bg-gray-50 text-gray-500 italic':''}`}>{h.label}</th>
                     ))}
                   </tr>
                   <tr>
-                    {['09:00 – 09:50','09:50 – 10:40','','11:00 – 11:50','11:50 – 12:40','','01:20 – 02:10','02:10 – 03:00','03:20 – 04:10'].map((t,i)=>(
+                    {['09:00 – 09:50','09:50 – 10:40','','11:00 – 11:50','11:50 – 12:40','','01:20 – 02:10','02:10 – 03:00','','03:20 – 04:10'].map((t,i)=>(
                       <th key={i} className="table-header text-xs font-normal">{t}</th>
                     ))}
                   </tr>
@@ -214,14 +187,19 @@ const ViewFacultyTimetables: React.FC = () => {
                   {['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'].map((day,dIdx)=>(
                     <tr key={day}>
                       <td className="table-header">{day}</td>
-                      {Array(9).fill(null).map((_,colIdx)=>{
-                        if(colIdx===2) return <td key={colIdx} className="table-cell bg-gray-50 text-center italic text-sm">Tea Break</td>;
+                      {Array(10).fill(null).map((_,colIdx)=>{
+                        if(colIdx===2 || colIdx===8) return <td key={colIdx} className="table-cell bg-gray-50 text-center italic text-sm">Tea Break</td>;
                         if(colIdx===5) return <td key={colIdx} className="table-cell bg-gray-50 text-center italic text-sm">Lunch</td>;
-                        const periodIdx = colIdx>5 ? colIdx-2 : colIdx>2 ? colIdx-1 : colIdx;
+                        let periodIdx:number;
+                        if(colIdx<2) periodIdx=colIdx; // 0,1
+                        else if(colIdx<5) periodIdx=colIdx-1; //3,4 => 2,3
+                        else if(colIdx<8) periodIdx=colIdx-2; //6,7 =>4,5
+                        else periodIdx=6; // col 9 => Period 7
+                        const slot = matrix[dIdx]?.[periodIdx] || [];
                         return (
                           <td key={colIdx} className="table-cell">
-                            {getTimetableCell(dIdx,periodIdx)}
-                        </td>
+                            {slot && getTimetableCell(dIdx,periodIdx)}
+                          </td>
                         );
                       })}
                     </tr>

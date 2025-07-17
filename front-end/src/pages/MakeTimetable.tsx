@@ -372,19 +372,19 @@ const MakeTimetable: React.FC = () => {
 
                   {index===0 && (
                   <>
-                    <div className="form-group">
-                      <label className="form-label">Year</label>
-                      <select name="year" value={form.year} onChange={(e)=>handleInputChange(index,e)} className="input-field">
-                        {[1,2,3,4].map(y=>(<option key={y} value={y}>{y}</option>))}
-                      </select>
-                    </div>
+                  <div className="form-group">
+                    <label className="form-label">Year</label>
+                    <select name="year" value={form.year} onChange={(e)=>handleInputChange(index,e)} className="input-field">
+                      {[1,2,3,4].map(y=>(<option key={y} value={y}>{y}</option>))}
+                    </select>
+                  </div>
 
-                    <div className="form-group">
-                      <label className="form-label">Section</label>
-                      <select name="section" value={form.section} onChange={(e)=>handleInputChange(index,e)} className="input-field">
-                        {['A','B','C'].map(sec=>(<option key={sec} value={sec}>{sec}</option>))}
-                      </select>
-                    </div>
+                  <div className="form-group">
+                    <label className="form-label">Section</label>
+                    <select name="section" value={form.section} onChange={(e)=>handleInputChange(index,e)} className="input-field">
+                      {['A','B','C'].map(sec=>(<option key={sec} value={sec}>{sec}</option>))}
+                    </select>
+                  </div>
                   </>) }
                 </div>
               </div>
@@ -436,63 +436,48 @@ const MakeTimetable: React.FC = () => {
                 <tr>
                   <th rowSpan={2} className="table-header align-middle">Day / Period</th>
                   {/* Header cells with breaks */}
-                  {[
-                    {type:'period',label:'Period 1'},
-                    {type:'period',label:'Period 2'},
-                    {type:'break',label:'Tea Break'},
-                    {type:'period',label:'Period 3'},
-                    {type:'period',label:'Period 4'},
-                    {type:'break',label:'Lunch'},
-                    {type:'period',label:'Period 5'},
-                    {type:'period',label:'Period 6'},
-                    {type:'period',label:'Period 7'},
-                  ].map((h,i)=>(
+                  {[{type:'period',label:'Period 1'},{type:'period',label:'Period 2'},{type:'break',label:'Tea Break'},{type:'period',label:'Period 3'},{type:'period',label:'Period 4'},{type:'break',label:'Lunch'},{type:'period',label:'Period 5'},{type:'period',label:'Period 6'},{type:'break',label:'Tea Break'},{type:'period',label:'Period 7'}].map((h,i)=>(
                     <th key={i} className={`table-header ${h.type==='break' ? 'bg-gray-50 text-gray-500 font-medium italic' : ''}`}>{h.label}</th>
                   ))}
                 </tr>
                 <tr>
-                  {[
-                    '09:00 – 09:50',
-                    '09:50 – 10:40',
-                    '',
-                    '11:00 – 11:50',
-                    '11:50 – 12:40',
-                    '',
-                    '01:20 – 02:10',
-                    '02:10 – 03:00',
-                    '03:20 – 04:10'
-                  ].map((t,i)=>(
+                  {['09:00 – 09:50','09:50 – 10:40','','11:00 – 11:50','11:50 – 12:40','','01:20 – 02:10','02:10 – 03:00','','03:20 – 04:10'].map((t,i)=>(
                     <th key={i} className="table-header text-xs font-normal">{t}</th>
                   ))}
                 </tr>
               </thead>
-               <tbody>
-                 {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map((day, dayIndex) => (
-                   <tr key={day}>
-                     <td className="table-header">{day}</td>
+              <tbody>
+                {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map((day, dayIndex) => (
+                  <tr key={day}>
+                    <td className="table-header">{day}</td>
                      {/* Iterate through 9 columns (periods + breaks) */}
-                     {Array(9).fill(null).map((_, colIdx) => {
+                     {Array(10).fill(null).map((_, colIdx) => {
                        // Break columns (index 2 and 5)
-                       if (colIdx === 2) {
-                         return <td key={colIdx} className="table-cell bg-gray-50 text-center italic text-sm">Tea Break</td>;
+                       if (colIdx === 2 || colIdx===8) {
+                         return <td key={colIdx} className="table-cell bg-gray-50 text-center italic text-sm">{colIdx===2?'Tea Break':'Tea Break'}</td>;
                        }
                        if (colIdx === 5) {
                          return <td key={colIdx} className="table-cell bg-gray-50 text-center italic text-sm">Lunch</td>;
                        }
 
                        // Map colIdx to matrix period index (skip break positions)
-                       const periodIndex = colIdx > 5 ? colIdx - 2 : colIdx > 2 ? colIdx - 1 : colIdx;
-                       const slot = timetable[dayIndex][periodIndex];
+                       let periodIndex:number;
+                       if(colIdx<2) periodIndex=colIdx;
+                       else if(colIdx<5) periodIndex=colIdx-1;
+                       else if(colIdx<8) periodIndex=colIdx-2;
+                       else periodIndex=6;
 
-                       return (
-                         <td
+                      const slot = timetable[dayIndex][periodIndex];
+
+                      return (
+                        <td
                            key={colIdx}
-                           onClick={() => handleCellClick(dayIndex, periodIndex)}
-                           onDragOver={handleDragOver}
-                           onDrop={(e)=>handleDrop(dayIndex, periodIndex, e)}
-                           className={`table-cell-interactive ${slot.length ? 'bg-blue-50/50' : unavailable[dayIndex][periodIndex] ? 'bg-red-50/60 cursor-not-allowed' : 'bg-white'}`}
-                         >
-                           {slot.length ? (
+                          onClick={() => handleCellClick(dayIndex, periodIndex)}
+                          onDragOver={handleDragOver}
+                          onDrop={(e)=>handleDrop(dayIndex, periodIndex, e)}
+                          className={`table-cell-interactive ${slot.length ? 'bg-blue-50/50' : unavailable[dayIndex][periodIndex] ? 'bg-red-50/60 cursor-not-allowed' : 'bg-white'}`}
+                        >
+                          {slot.length ? (
                             <div className="space-y-1">
                               {slot.map((sub,idx)=>(
                                 <div key={idx} className="border-b last:border-none pb-1 mb-1 last:pb-0 last:mb-0">
@@ -513,12 +498,12 @@ const MakeTimetable: React.FC = () => {
                               </div>
                             )
                           )}
-                         </td>
-                       );
-                     })}
-                   </tr>
-                 ))}
-               </tbody>
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
             </table>
           </div>
 

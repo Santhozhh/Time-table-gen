@@ -48,9 +48,9 @@ function App() {
               <FaGraduationCap className="text-3xl text-indigo-700" />
             </div>
             {!collapsed && (
-              <h1 className="text-xl font-bold text-shadow-blue-50 leading-tight">
-                VCET<br/>TIME TABLE
-              </h1>
+            <h1 className="text-xl font-bold text-shadow-blue-50 leading-tight">
+              VCET<br/>TIME TABLE
+            </h1>
             )}
           </div>
           <ul className="space-y-3 flex-1">
