@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { MdPerson, MdDelete, MdEdit, MdAdd } from 'react-icons/md';
+import { useToast } from '../components/ToastProvider';
 
 interface Faculty {
   _id: string;
@@ -35,6 +36,7 @@ const FacultyEdit: React.FC = () => {
     specialization: 'CSE',
   });
   const [editingId,setEditingId]=useState<string|null>(null);
+  const { showToast } = useToast();
 
   useEffect(() => {
     fetchFaculty();
@@ -50,7 +52,7 @@ const FacultyEdit: React.FC = () => {
       setFaculty(data);
     } catch (error) {
       console.error('Error fetching faculty:', error);
-      alert('Failed to load faculty list. Please try again.');
+      showToast('Failed to load faculty list. Please try again.', 'error');
     }
   };
 
@@ -67,10 +69,10 @@ const FacultyEdit: React.FC = () => {
       setFormData({name:'',grade:'Assistant Professor I',specialization:'CSE'});
       setEditingId(null);
       fetchFaculty();
-      alert(editingId?'Faculty updated!':'Faculty added successfully!');
+      showToast(editingId?'Faculty updated!':'Faculty added successfully!', 'success');
     }catch(err){
       console.error('faculty save err',err);
-      alert(err instanceof Error?err.message:'Failed to save');
+      showToast(err instanceof Error?err.message:'Failed to save', 'error');
     }
   };
 
@@ -89,10 +91,10 @@ const FacultyEdit: React.FC = () => {
       }
       
       fetchFaculty();
-      alert('Faculty deleted successfully!');
+      showToast('Faculty deleted successfully!', 'success');
     } catch (error) {
       console.error('Error deleting faculty:', error);
-      alert('Failed to delete faculty. Please try again.');
+      showToast('Failed to delete faculty. Please try again.', 'error');
     }
   };
 

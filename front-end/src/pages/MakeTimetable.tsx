@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { MdAdd, MdSchedule, MdSchool,  MdPlayArrow, MdSave, MdDelete } from 'react-icons/md';
 import { generatedTimetableApi } from '../services/api';
 
@@ -36,6 +36,10 @@ interface TimetableCell {
 type TimetableSlot = TimetableCell[]; // NEW – allows multiple entries per period
 
 const MakeTimetable: React.FC = () => {
+  const [searchParams]=useSearchParams();
+  const defaultYear=parseInt(searchParams.get('year')||'3',10);
+  const defaultSection=(searchParams.get('section')||'A').toUpperCase();
+
   const [forms, setForms] = useState<TimetableForm[]>([{
     courseName: '',
     courseCode: '',
@@ -43,8 +47,8 @@ const MakeTimetable: React.FC = () => {
     hoursPerWeek: 0,
     facultyId: '',
     additionalFacultyId: '',
-    section: 'A',
-    year: 1
+    section: defaultSection as any,
+    year: defaultYear
   }]);
 
   const [faculty, setFaculty] = useState<Faculty[]>([]);
@@ -105,6 +109,12 @@ const MakeTimetable: React.FC = () => {
       ...newForms[index],
       [name]: parsed
     };
+    // if updating year/section of first subject propagate to others
+    if(index===0 && (name==='year' || name==='section')){
+      for(let i=1;i<newForms.length;i++){
+        newForms[i] = { ...newForms[i], [name]: parsed } as TimetableForm;
+      }
+    }
     setForms(newForms);
     if(index===currentFormIndex && (e.target.name==='facultyId')){
       computeUnavailable(e.target.value);
@@ -119,6 +129,7 @@ const MakeTimetable: React.FC = () => {
   },[currentFormIndex]);
 
   const addNewSubject = () => {
+    const base = forms[0] || {year:3,section:'A'} as any;
     setForms([...forms, {
       courseName: '',
       courseCode: '',
@@ -126,8 +137,8 @@ const MakeTimetable: React.FC = () => {
       hoursPerWeek: 0,
       facultyId: '',
       additionalFacultyId: '',
-      section: 'A',
-      year: 3
+      section: base.section,
+      year: base.year
     }]);
   };
 
@@ -359,19 +370,22 @@ const MakeTimetable: React.FC = () => {
                     </div>
                   )}
 
-                  <div className="form-group">
-                    <label className="form-label">Year</label>
-                    <select name="year" value={form.year} onChange={(e)=>handleInputChange(index,e)} className="input-field">
-                      {[1,2,3,4].map(y=>(<option key={y} value={y}>{y}</option>))}
-                    </select>
-                  </div>
+                  {index===0 && (
+                  <>
+                    <div className="form-group">
+                      <label className="form-label">Year</label>
+                      <select name="year" value={form.year} onChange={(e)=>handleInputChange(index,e)} className="input-field">
+                        {[1,2,3,4].map(y=>(<option key={y} value={y}>{y}</option>))}
+                      </select>
+                    </div>
 
-                  <div className="form-group">
-                    <label className="form-label">Section</label>
-                    <select name="section" value={form.section} onChange={(e)=>handleInputChange(index,e)} className="input-field">
-                      {['A','B','C'].map(sec=>(<option key={sec} value={sec}>{sec}</option>))}
-                    </select>
-                  </div>
+                    <div className="form-group">
+                      <label className="form-label">Section</label>
+                      <select name="section" value={form.section} onChange={(e)=>handleInputChange(index,e)} className="input-field">
+                        {['A','B','C'].map(sec=>(<option key={sec} value={sec}>{sec}</option>))}
+                      </select>
+                    </div>
+                  </>) }
                 </div>
               </div>
             ))}

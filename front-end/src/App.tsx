@@ -1,8 +1,10 @@
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { MdSchedule, MdPerson, MdGroup, MdEdit, MdChevronLeft, MdChevronRight, MdEmail } from 'react-icons/md';
 import { FaGraduationCap } from 'react-icons/fa';
+import { ToastProvider } from './components/ToastProvider';
 import MakeTimetable from './pages/MakeTimetable';
 import ViewStudentTimetables from './pages/ViewStudentTimetables';
+import Home from './pages/Home';
 import ViewFacultyTimetables from './pages/ViewFacultyTimetables';
 import FacultyEdit from './pages/FacultyEdit';
 import EditTimetable from './pages/EditTimetable';
@@ -36,6 +38,7 @@ const NavLink = ({ to, icon, text, collapsed }: { to: string; icon: React.ReactN
 function App() {
   const [collapsed, setCollapsed] = React.useState(false);
   return (
+    <ToastProvider>
     <Router>
       <div className="flex min-h-screen bg-gray-50">
         {/* Sidebar */}
@@ -112,6 +115,7 @@ function App() {
         <main className={`flex-1 ${collapsed ? 'ml-20' : 'ml-72'} p-8 bg-[#f8fafc] min-h-screen transition-all duration-300`}>
           <div className="max-w-7xl mx-auto animate-fade-in">
             <Routes>
+              <Route path="/" element={<Home />} />
               <Route path="/make-timetable" element={<MakeTimetable />} />
               <Route path="/view-student-timetables" element={<ViewStudentTimetables />} />
               <Route path="/view-faculty-timetables" element={<ViewFacultyTimetables />} />
@@ -123,6 +127,7 @@ function App() {
         {/* Bottom controls inside sidebar handled above */}
       </div>
     </Router>
+    </ToastProvider>
   );
 }
 

@@ -268,7 +268,10 @@ const ViewStudentTimetables: React.FC = () => {
                 </table>
               </div>
             ) : (
-              <p className="text-gray-600">No timetable data for the selected Year & Section.</p>
+              <div className="flex flex-col items-start gap-4">
+                <p className="text-gray-600">No timetable exists for Year {selectedYS?.year} Section {selectedYS?.section}.</p>
+                <button onClick={()=>navigate(`/make-timetable?year=${selectedYS?.year}&section=${selectedYS?.section}`)} className="btn-primary">Create Timetable</button>
+              </div>
             )}
           </div>
         </div>

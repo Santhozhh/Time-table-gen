@@ -151,6 +151,24 @@ const EditTimetable: React.FC = () => {
     setTimetable(newTT);
   };
 
+  /* ---------- Drag & Drop Helpers ---------- */
+  const handleDragStart = (index:number, e:React.DragEvent<HTMLLIElement>)=>{
+    e.dataTransfer.setData('subjectIndex', String(index));
+  };
+
+  const handleDragOver = (e:React.DragEvent<HTMLTableCellElement>)=>{
+    e.preventDefault();
+  };
+
+  const handleDrop = (dayIndex:number, periodIndex:number, e:React.DragEvent<HTMLTableCellElement>)=>{
+    e.preventDefault();
+    const idxStr = e.dataTransfer.getData('subjectIndex');
+    if(!idxStr) return;
+    const subIdx = parseInt(idxStr,10);
+    setCurrentFormIndex(subIdx);
+    handleCellClick(dayIndex, periodIndex);
+  };
+
   if (loading) return <p>Loading...</p>;
 
   return (
@@ -257,7 +275,7 @@ const EditTimetable: React.FC = () => {
                       const periodIdx = colIdx>5 ? colIdx-2 : colIdx>2 ? colIdx-1 : colIdx;
                       const slot = timetable[dIdx]?.[periodIdx] || [];
                       return (
-                        <td key={colIdx} className="table-cell cursor-pointer" onClick={()=>handleCellClick(dIdx,periodIdx)}>
+                        <td key={colIdx} className="table-cell cursor-pointer" onClick={()=>handleCellClick(dIdx,periodIdx)} onDragOver={handleDragOver} onDrop={(e)=>handleDrop(dIdx,periodIdx,e)}>
                           {slot.map((s,idx)=>(
                             <div key={idx} className="space-y-1">
                               <div className="font-medium text-gray-800 text-xs">{s.courseName}</div>
@@ -271,6 +289,31 @@ const EditTimetable: React.FC = () => {
                 ))}
               </tbody>
             </table>
+          </div>
+
+          {/* Subject List */}
+          <div className="mt-6">
+            <div className="card p-6">
+              <h3 className="text-xl font-semibold text-gray-800 mb-4">Subject List</h3>
+              <ul className="space-y-3">
+                {forms.map((subj, idx) => (
+                  <li
+                    key={idx}
+                    className="subject-item cursor-move"
+                    draggable
+                    onDragStart={(e)=>handleDragStart(idx,e)}
+                    onClick={()=>setCurrentFormIndex(idx)}
+                  >
+                    <div>
+                      <p className="font-medium text-gray-800">{subj.courseName}</p>
+                      <p className="text-sm text-blue-600">{subj.courseCode}</p>
+                    </div>
+                    <div className="text-sm text-gray-500 capitalize">{subj.type}</div>
+                    <div className="text-xs text-gray-500">Hrs {subj.hoursPerWeek}</div>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         </div>
         <div className="p-6 flex justify-end">
