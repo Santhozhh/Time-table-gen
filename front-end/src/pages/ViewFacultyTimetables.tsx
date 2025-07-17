@@ -199,7 +199,7 @@ const ViewFacultyTimetables: React.FC = () => {
                         return (
                           <td key={colIdx} className="table-cell">
                             {slot && getTimetableCell(dIdx,periodIdx)}
-                          </td>
+                        </td>
                         );
                       })}
                     </tr>

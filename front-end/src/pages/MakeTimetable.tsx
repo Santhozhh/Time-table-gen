@@ -155,22 +155,9 @@ const MakeTimetable: React.FC = () => {
   const handleCellClick = (dayIndex: number, periodIndex: number) => {
     const currentForm = forms[currentFormIndex];
 
-    // Calculate current allocated hours for this subject (flatten 2 levels)
-    const currentHours = timetable.flat(2).filter(cell => 
-      cell.courseName === currentForm.courseName && 
-      cell.courseCode === currentForm.courseCode &&
-      cell.section === currentForm.section &&
-      cell.year === currentForm.year
-    ).length;
-
     // If faculty already busy elsewhere (unavailable matrix marks first clash)
     if (unavailable[dayIndex][periodIndex]) {
       alert('Faculty already allocated in another class at this time');
-      return;
-    }
-
-    if (currentHours >= currentForm.hoursPerWeek) {
-      alert('All hours for this course have been allocated!');
       return;
     }
 
@@ -197,6 +184,17 @@ const MakeTimetable: React.FC = () => {
             const cloned = [...slot];
             cloned.splice(existsIdx,1);
             return cloned;
+          }
+          // before adding ensure hours limit not exceeded (recompute after potential removal)
+          const currentHours = timetable.flat(2).filter(cell => 
+            cell.courseName === currentForm.courseName && 
+            cell.courseCode === currentForm.courseCode &&
+            cell.section === currentForm.section &&
+            cell.year === currentForm.year
+          ).length;
+          if(currentHours >= currentForm.hoursPerWeek){
+            alert('All hours for this course have been allocated!');
+            return slot;
           }
           return [...slot, newEntry];
         }
@@ -512,10 +510,17 @@ const MakeTimetable: React.FC = () => {
             <div className="card p-6">
               <h3 className="text-xl font-semibold text-gray-800 mb-4">Subject List</h3>
               <ul className="space-y-3">
-                {forms.map((subj, idx) => (
+                {forms.map((subj, idx) => {
+                  const allocated = timetable.flat(2).filter(c=> c.courseCode===subj.courseCode && c.section===subj.section && c.year===subj.year).length;
+                  const fully = allocated >= subj.hoursPerWeek && subj.hoursPerWeek>0;
+                  let itemCls = 'subject-item cursor-move ';
+                  if(idx===currentFormIndex) itemCls += 'bg-indigo-50 border-indigo-400 ';
+                  else if(fully) itemCls += 'border-red-400 bg-red-50 ';
+                  else itemCls += 'bg-white ';
+                  return (
                   <li
                     key={idx}
-                    className="subject-item cursor-move"
+                    className={itemCls.trim()}
                     draggable
                     onDragStart={(e)=>handleDragStart(idx,e)}
                     onClick={()=>setCurrentFormIndex(idx)}
@@ -525,9 +530,9 @@ const MakeTimetable: React.FC = () => {
                       <p className="text-sm text-blue-600">{subj.courseCode}</p>
                     </div>
                     <div className="text-sm text-gray-500 capitalize">{subj.type}</div>
-                    <div className="text-xs text-gray-500">Year {subj.year} • Sec {subj.section}</div>
+                    <div className="text-xs text-gray-500">Hrs {allocated}/{subj.hoursPerWeek}</div>
                   </li>
-                ))}
+                  );})}
               </ul>
             </div>
           </div>

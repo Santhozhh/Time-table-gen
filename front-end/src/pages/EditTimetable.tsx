@@ -305,10 +305,17 @@ const EditTimetable: React.FC = () => {
             <div className="card p-6">
               <h3 className="text-xl font-semibold text-gray-800 mb-4">Subject List</h3>
               <ul className="space-y-3">
-                {forms.map((subj, idx) => (
+                {forms.map((subj, idx) => {
+                  const allocated = timetable.flat(2).filter(c=> c.courseCode===subj.courseCode && c.section===subj.section && c.year===subj.year).length;
+                  const fully = allocated >= subj.hoursPerWeek && subj.hoursPerWeek>0;
+                  let itemCls='subject-item cursor-move ';
+                  if(idx===currentFormIndex) itemCls+='bg-indigo-50 border-indigo-400 ';
+                  else if(fully) itemCls+='border-red-400 bg-red-50 ';
+                  else itemCls+='bg-white ';
+                  return (
                   <li
                     key={idx}
-                    className="subject-item cursor-move"
+                    className={itemCls.trim()}
                     draggable
                     onDragStart={(e)=>handleDragStart(idx,e)}
                     onClick={()=>setCurrentFormIndex(idx)}
@@ -318,9 +325,9 @@ const EditTimetable: React.FC = () => {
                       <p className="text-sm text-blue-600">{subj.courseCode}</p>
                     </div>
                     <div className="text-sm text-gray-500 capitalize">{subj.type}</div>
-                    <div className="text-xs text-gray-500">Hrs {subj.hoursPerWeek}</div>
+                    <div className="text-xs text-gray-500">Hrs {allocated}/{subj.hoursPerWeek}</div>
                   </li>
-                ))}
+                  );})}
               </ul>
             </div>
           </div>
