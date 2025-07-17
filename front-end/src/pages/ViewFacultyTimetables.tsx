@@ -107,7 +107,7 @@ const ViewFacultyTimetables: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-blue-400">Faculty Timetables</h2>
+      <h2 className="text-2xl font-bold text-blue-400">FACULTY TIMETABLES</h2>
 
       <div className={`grid grid-cols-1 ${listCollapsed ? '' : 'md:grid-cols-3'} gap-6`}>
         {/* Faculty list */}

@@ -37,7 +37,7 @@ type TimetableSlot = TimetableCell[]; // NEW – allows multiple entries per per
 
 const MakeTimetable: React.FC = () => {
   const [searchParams]=useSearchParams();
-  const defaultYear=parseInt(searchParams.get('year')||'3',10);
+  const defaultYear=parseInt(searchParams.get('year')||'1',10);
   const defaultSection=(searchParams.get('section')||'A').toUpperCase();
 
   const [forms, setForms] = useState<TimetableForm[]>([{

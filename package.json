@@ -1,6 +1,0 @@
-{
-  "devDependencies": {
-    "@types/canvas-confetti": "^1.9.0",
-    "@types/react-redux": "^7.1.34"
-  }
-}

@@ -166,7 +166,7 @@ const ViewStudentTimetables: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-blue-400">Student Timetables</h2>
+      <h2 className="text-2xl font-bold text-blue-400">STUDENTS TIMETABLES</h2>
 
       {loading && <p>Loading...</p>}
       {!loading && (
