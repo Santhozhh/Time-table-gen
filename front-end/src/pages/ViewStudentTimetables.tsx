@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
+// Animation handled via CSS class .animate-slide-up
 import { generatedTimetableApi, facultyApi } from '../services/api';
-import { MdClass, MdDownload, MdEdit, MdChevronLeft, MdChevronRight, MdGroup } from 'react-icons/md';
+import {  MdDownload, MdEdit, MdChevronLeft, MdChevronRight, MdGroup } from 'react-icons/md';
 import { useNavigate } from 'react-router-dom';
 import { usePeriods } from '../context/PeriodsContext';
 
@@ -234,14 +235,38 @@ const ViewStudentTimetables: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {["1", "2", "3", "4", "5", "6"].map((day, dIdx) => (
-                      <tr key={day}>
+                    {['1','2','3','4','5','6'].map((day,dIdx)=> (
+                      <tr key={day} className="animate-slide-up" style={{animationDelay: `${dIdx*50}ms`}}>
                         <td className="table-header">{day}</td>
-                        {Array(NUM_PERIODS).fill(null).map((_,periodIdx)=> (
-                             <td key={periodIdx} className="table-cell">
-                               {getCellContent(dIdx, periodIdx)}
-                             </td>
-                           ))}
+                        {/* Dynamically render cells with horizontal merging */}
+                        {(()=>{
+                          const cells:JSX.Element[] = [];
+                          for(let p=0; p<NUM_PERIODS;){
+                            const cell = matrix[dIdx][p];
+                            if(cell){
+                              // determine how many consecutive periods contain the same course (for practicals)
+                              let span = 1;
+                              while(p+span < NUM_PERIODS){
+                                const next = matrix[dIdx][p+span];
+                                if(next && next.courseCode===cell.courseCode && next.section===cell.section && next.year===cell.year){
+                                  span++;
+                                }else break;
+                              }
+                              cells.push(
+                                <td key={p} colSpan={span} className="table-cell animate-pop" style={{animationDelay:`${p*40}ms`}}>
+                                  {getCellContent(dIdx, p)}
+                                </td>
+                              );
+                              p += span;
+                            }else{
+                              cells.push(
+                                <td key={p} className="table-cell animate-pop" style={{animationDelay:`${p*40}ms`}} />
+                              );
+                              p++;
+                            }
+                          }
+                          return cells;
+                        })()}
                       </tr>
                     ))}
                   </tbody>

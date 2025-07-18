@@ -190,14 +190,16 @@ const EditTimetable: React.FC = () => {
     setTimetable(newTT);
   };
 
-  // Remove single entry from timetable slot
+  // Remove a subject entry across all contiguous slots in the selected day
   const removeEntry = (dayIdx:number, periodIdx:number, entryIdx:number)=>{
-    setTimetable(prev=> prev.map((day,d)=> day.map((slot,p)=>{
-      if(d===dayIdx && p===periodIdx){
-        const newSlot=[...slot]; newSlot.splice(entryIdx,1); return newSlot;
-      }
-      return slot;
-    })));
+    const entry = timetable[dayIdx]?.[periodIdx]?.[entryIdx];
+    if(!entry) return;
+    const subjId = entry.subjectId;
+    setTimetable(prev=> prev.map((day,d)=>{
+      if(d!==dayIdx) return day;
+      // Remove the subject from every slot of this day (handles merged practical blocks)
+      return day.map(slot=> slot.filter(s=> s.subjectId!==subjId));
+    }));
   };
 
   /* ---------- Drag & Drop Helpers ---------- */
@@ -341,22 +343,45 @@ const EditTimetable: React.FC = () => {
                 {days.map((day,dIdx)=>(
                   <tr key={day}>
                     <td className="table-header">{day}</td>
-                    {Array(NUM_PERIODS).fill(null).map((_,periodIdx)=>{
-                      const slot = timetable[dIdx]?.[periodIdx] || [];
-                      return (
-                        <td key={periodIdx} className="table-cell cursor-pointer" onClick={()=>handleCellClick(dIdx,periodIdx)} onDragOver={handleDragOver} onDrop={(e)=>handleDrop(dIdx,periodIdx,e)}>
-                          {slot.map((s,idx)=>(
-                            <div key={idx} className="space-y-1 relative group">
-                              <button onClick={(e)=>{e.stopPropagation(); removeEntry(dIdx, periodIdx, idx);}} className="absolute top-0 right-0 p-0.5 hidden group-hover:block hover:bg-red-100 rounded" title="Remove">
-                                <MdClose className="text-red-600 text-xs" />
-                              </button>
-                              <div className="font-medium text-gray-800 text-xs">{s.courseName}</div>
-                              <div className="text-[10px] text-blue-600">{s.courseCode}</div>
-                            </div>
-                          ))}
-                        </td>
-                      );
-                    })}
+                    {/* Render merged cells */}
+                    {(()=>{
+                      const cells:JSX.Element[] = [];
+                      for(let periodIdx=0; periodIdx<NUM_PERIODS;){
+                        const slot = timetable[dIdx]?.[periodIdx] || [];
+                        if(slot.length){
+                          const sig = slot.map(s=>s.subjectId).sort().join('|');
+                          let span = 1;
+                          const startIdx = periodIdx; /* capture */
+                          while(periodIdx+span < NUM_PERIODS){
+                            const nextSlot = timetable[dIdx]?.[periodIdx+span] || [];
+                            const nextSig = nextSlot.map(s=>s.subjectId).sort().join('|');
+                            if(nextSig === sig && sig){
+                              span++;
+                            }else break;
+                          }
+                          cells.push(
+                            <td key={startIdx} colSpan={span} className="table-cell cursor-pointer" onClick={()=>handleCellClick(dIdx,startIdx)} onDragOver={handleDragOver} onDrop={(e)=>handleDrop(dIdx,startIdx,e)}>
+                              {slot.map((s,idx)=>(
+                                <div key={idx} className="space-y-1 relative group">
+                                  <button onClick={(e)=>{e.stopPropagation(); removeEntry(dIdx,startIdx,idx);}} className="absolute top-0 right-0 p-0.5 hidden group-hover:block hover:bg-red-100 rounded" title="Remove">
+                                    <MdClose className="text-red-600 text-xs" />
+                                  </button>
+                                  <div className="font-medium text-gray-800 text-xs">{s.courseName}</div>
+                                  <div className="text-[10px] text-blue-600">{s.courseCode}</div>
+                                </div>
+                              ))}
+                            </td>
+                          );
+                          periodIdx += span;
+                        }else{
+                          cells.push(
+                            <td key={periodIdx} className="table-cell cursor-pointer" onClick={()=>handleCellClick(dIdx,periodIdx)} onDragOver={handleDragOver} onDrop={(e)=>handleDrop(dIdx,periodIdx,e)} />
+                          );
+                          periodIdx++;
+                        }
+                      }
+                      return cells;
+                    })()}
                   </tr>
                 ))}
               </tbody>
@@ -377,11 +402,39 @@ const EditTimetable: React.FC = () => {
                 </div>) }
 
               {/* Practical & Others */}
-              {forms.some(f=>f.type!=='theory') && (
+              {forms.some(f=>f.type='practical') && (
                     <div>
-                  <h4 className="font-semibold text-gray-700 mb-2">Practical & Others</h4>
+                  <h4 className="font-semibold text-gray-700 mb-2">Practical </h4>
                   <ul className="space-y-3">
-                    {forms.map((subj,idx)=> subj.type!=='theory'? renderSubjectItem(subj,idx): null)}
+                    {forms.map((subj,idx)=> subj.type==='practical' ? renderSubjectItem(subj,idx): null)}
+              </ul>
+                </div>) }
+                {forms.some(f=>f.type==='theory_practical') && (
+                    <div>
+                  <h4 className="font-semibold text-gray-700 mb-2">Theory With Practical </h4>
+                  <ul className="space-y-3">
+                    {forms.map((subj,idx)=> subj.type==='theory_practical' ? renderSubjectItem(subj,idx): null)}
+              </ul>
+                </div>) }
+                {forms.some(f=>f.type==='honors') && (
+                    <div>
+                  <h4 className="font-semibold text-gray-700 mb-2">honors</h4>
+                  <ul className="space-y-3">
+                    {forms.map((subj,idx)=> subj.type==='honors' ? renderSubjectItem(subj,idx): null)}
+              </ul>
+                </div>) }
+                {forms.some(f=>f.type==='one_credit') && (
+                    <div>
+                  <h4 className="font-semibold text-gray-700 mb-2">One Credit</h4>
+                  <ul className="space-y-3">
+                    {forms.map((subj,idx)=> subj.type==='one_credit'? renderSubjectItem(subj,idx): null)}
+              </ul>
+                </div>) }
+                {forms.some(f=>f.type==='other') && (
+                    <div>
+                  <h4 className="font-semibold text-gray-700 mb-2">Others</h4>
+                  <ul className="space-y-3">
+                    {forms.map((subj,idx)=> subj.type==='other' ? renderSubjectItem(subj,idx): null)}
               </ul>
                 </div>) }
             </div>

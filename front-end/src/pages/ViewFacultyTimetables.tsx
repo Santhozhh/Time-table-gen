@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+// Animation handled via CSS class .animate-slide-up
 import { facultyApi, generatedTimetableApi } from '../services/api';
 import { usePeriods } from '../context/PeriodsContext';
 
@@ -94,18 +95,7 @@ const ViewFacultyTimetables: React.FC = () => {
     return count;
   };
 
-  const getTimetableCell = (day: number, period: number) => {
-    const cell = matrix[day][period];
-    if (!cell) return null;
 
-    return (
-      <div className="space-y-1">
-        <div className="font-medium text-gray-800">{cell.courseName}</div>
-        <div className="text-sm text-blue-600">{cell.courseCode}</div>
-        <div className="text-xs text-gray-500">Year {cell.year ?? '-'} • Sec {cell.section}</div>
-      </div>
-    );
-  };
 
   return (
     <div className="space-y-6">
@@ -189,22 +179,38 @@ const ViewFacultyTimetables: React.FC = () => {
                 </thead>
                 <tbody>
                   {['1','2','3','4','5','6'].map((day,dIdx)=>(
-                    <tr key={day}>
+                    <tr key={day} className="animate-slide-up" style={{animationDelay: `${dIdx*50}ms`}}>
                       <td className="table-header">{day}</td>
-                      {Array(NUM_PERIODS).fill(null).map((_,periodIdx)=>{
-                        const slot = matrix[dIdx]?.[periodIdx] || null;
-                        return (
-                          <td key={periodIdx} className="table-cell">
-                            {slot ? (
-                              <div className="space-y-1">
-                                <div className="font-medium text-gray-800 text-xs">{slot.courseName}</div>
-                                 <div className="text-[10px] text-blue-600">Year :{slot.year }</div>
+                      {/* Render cells with horizontal merge */}
+                      {(()=>{
+                        const cells:JSX.Element[] = [];
+                        for(let p=0; p<NUM_PERIODS;){
+                          const slot = matrix[dIdx]?.[p] || null;
+                          if(slot){
+                            let span = 1;
+                            while(p+span < NUM_PERIODS){
+                              const next = matrix[dIdx]?.[p+span] || null;
+                              if(next && next.courseCode===slot.courseCode && next.section===slot.section && next.year===slot.year){
+                                span++;
+                              }else break;
+                            }
+                            cells.push(
+                              <td key={p} colSpan={span} className="table-cell animate-pop" style={{animationDelay:`${p*40}ms`}}>
+                                <div className="space-y-1">
+                                  <div className="font-medium text-gray-800 text-xs">{slot.courseName}</div>
+                                  <div className="text-[10px] text-blue-600">Year :{slot.year}</div>
                                   <div className="text-[10px] text-blue-600">Sec : {slot.section}</div>
-                              </div>
-                            ) : null}
-                          </td>
-                        );
-                      })}
+                                </div>
+                              </td>
+                            );
+                            p += span;
+                          }else{
+                            cells.push(<td key={p} className="table-cell animate-pop" style={{animationDelay:`${p*40}ms`}}/>);
+                            p++;
+                          }
+                        }
+                        return cells;
+                      })()}
                     </tr>
                   ))}
                 </tbody>

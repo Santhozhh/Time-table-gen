@@ -59,6 +59,12 @@
   .animate-slide-in-left {
     @apply animate-[slideInLeft_0.4s_ease-out];
   }
+  .animate-slide-up {
+    @apply animate-[slideUp_0.4s_ease-out_forwards];
+  }
+  .animate-pop {
+    @apply animate-[pop_0.35s_ease-out_forwards];
+  }
 
   @keyframes fadeIn {
     from {
@@ -80,6 +86,16 @@
       opacity: 1;
       transform: translateX(0);
     }
+  }
+
+  @keyframes slideUp {
+    from { opacity:0; transform:translateY(20px);} 
+    to { opacity:1; transform:translateY(0);} 
+  }
+
+  @keyframes pop {
+    from { opacity:0; transform: scale(0.9); }
+    to { opacity:1; transform: scale(1); }
   }
 
   /* Navigation styles */
@@ -130,6 +146,15 @@
 
   .table-cell-interactive {
     @apply h-24 align-top px-4 py-2 border border-gray-200 text-sm text-gray-800 cursor-pointer;
+  }
+
+  /* ----- Hover effect on timetable cells ----- */
+  .table-cell:hover,
+  .table-cell-interactive:hover {
+    @apply bg-indigo-50 shadow-md;
+    transform: scale(1.03);
+    transition: transform 0.15s ease-out, background-color 0.15s ease-out;
+    z-index: 10;
   }
 
   .subject-item {

@@ -283,12 +283,13 @@ const MakeTimetable: React.FC = () => {
 
   // Remove single entry from a slot
   const removeEntry = (dayIdx:number, periodIdx:number, entryIdx:number)=>{
-    setTimetable(prev=> prev.map((day,d)=> day.map((slot,p)=>{
-      if(d===dayIdx && p===periodIdx){
-        const newSlot = [...slot]; newSlot.splice(entryIdx,1); return newSlot;
-      }
-      return slot;
-    })));
+    const entry = timetable[dayIdx]?.[periodIdx]?.[entryIdx];
+    if(!entry) return;
+    const subjId = entry.subjectId;
+    setTimetable(prev=> prev.map((day,d)=>{
+      if(d!==dayIdx) return day;
+      return day.map(slot=> slot.filter(s=> s.subjectId!==subjId));
+    }));
   };
 
   // Helper to render a single subject item (shared by grouped lists)
@@ -515,22 +516,37 @@ const MakeTimetable: React.FC = () => {
                 {['1', '2', '3', '4', '5', '6'].map((day, dayIndex) => (
                   <tr key={day}>
                     <td className="table-header">{day}</td>
-                     {Array(NUM_PERIODS).fill(null).map((_, periodIndex) => {
+                     {/* Render cells with merging (practicals) */}
+                     {(()=>{
+                        const cells:JSX.Element[] = [];
+                        for(let periodIndex=0; periodIndex<NUM_PERIODS;){
                       const slot = timetable[dayIndex][periodIndex];
+                          const isUnavailable = unavailable[dayIndex][periodIndex];
 
-                      return (
-                        <td
-                           key={periodIndex}
-                          onClick={() => handleCellClick(dayIndex, periodIndex)}
+                          if(slot.length){
+                            // create signature using subjectIds (assuming same subject repeated)
+                            const sig = slot.map(s=>s.subjectId).sort().join('|');
+                            let span = 1;
+                            const startIdx = periodIndex; /* capture start index */
+                            while(periodIndex+span < NUM_PERIODS){
+                              const nextSlot = timetable[dayIndex][periodIndex+span];
+                              const nextSig = nextSlot.map(s=>s.subjectId).sort().join('|');
+                              if(nextSig === sig && sig){
+                                span++;
+                              }else break;
+                            }
+                            cells.push(
+                              <td key={startIdx}
+                                  colSpan={span}
+                                  onClick={()=>handleCellClick(dayIndex, startIdx)}
                           onDragOver={handleDragOver}
-                          onDrop={(e)=>handleDrop(dayIndex, periodIndex, e)}
-                          className={`table-cell-interactive ${slot.length ? 'bg-blue-50/50' : unavailable[dayIndex][periodIndex] ? 'bg-red-50/60 cursor-not-allowed' : 'bg-white'}`}
+                                  onDrop={(e)=>handleDrop(dayIndex, startIdx, e)}
+                                  className={`table-cell-interactive bg-blue-50/50`}
                         >
-                          {slot.length ? (
                             <div className="space-y-1">
-                              {slot.map((sub,idx)=>(
+                                  {slot.map((sub,idx)=> (
                                 <div key={idx} className="border-b last:border-none pb-1 mb-1 last:pb-0 last:mb-0 relative group">
-                                  <button onClick={(e)=>{e.stopPropagation(); removeEntry(dayIndex, periodIndex, idx);}} className="absolute top-0 right-0 p-0.5 rounded hover:bg-red-100 hidden group-hover:block" title="Remove">
+                                      <button onClick={(e)=>{e.stopPropagation(); removeEntry(dayIndex, startIdx, idx);}} className="absolute top-0 right-0 p-0.5 rounded hover:bg-red-100 hidden group-hover:block" title="Remove">
                                     <MdClose className="text-red-600 text-xs" />
                                   </button>
                                   <div className="font-medium text-gray-800">{sub.courseName}</div>
@@ -541,18 +557,31 @@ const MakeTimetable: React.FC = () => {
                                 </div>
                               ))}
                             </div>
-                          ) : (
-                            unavailable[dayIndex][periodIndex] && (
+                              </td>
+                            );
+                            periodIndex += span;
+                          }else{
+                            cells.push(
+                              <td key={periodIndex}
+                                  onClick={()=>handleCellClick(dayIndex, periodIndex)}
+                                  onDragOver={handleDragOver}
+                                  onDrop={(e)=>handleDrop(dayIndex, periodIndex, e)}
+                                  className={`table-cell-interactive ${isUnavailable ? 'bg-red-50/60 cursor-not-allowed' : 'bg-white'}`}
+                              >
+                                {isUnavailable && (
                               <div className="space-y-1 opacity-70 text-red-700">
                                 <div className="font-medium">{unavailable[dayIndex][periodIndex]?.courseName}</div>
                                 <div className="text-sm">{unavailable[dayIndex][periodIndex]?.courseCode}</div>
                                 <div className="text-xs">Sec {unavailable[dayIndex][periodIndex]?.section}</div>
                               </div>
-                            )
                           )}
                         </td>
                       );
-                    })}
+                            periodIndex++;
+                          }
+                        }
+                        return cells;
+                     })()}
                   </tr>
                 ))}
               </tbody>
@@ -574,13 +603,46 @@ const MakeTimetable: React.FC = () => {
               </div>)}
 
               {/* Practical & Others */}
-              {forms.some(f=>f.type!=='theory') && (
+              {forms.some(f=>f.type==='practical') && (
                     <div>
-                <h4 className="font-semibold text-gray-700 mb-2">Practical & Others</h4>
+                <h4 className="font-semibold text-gray-700 mb-2">Practical </h4>
                 <ul className="space-y-3">
-                 {forms.map((subj, idx)=> subj.type!=='theory' ? renderSubjectItem(subj,idx) : null)}
+                 {forms.map((subj, idx)=> subj.type==='practical' ? renderSubjectItem(subj,idx) : null)}
               </ul>
               </div>)}
+                {forms.some(f=>f.type==='theory_practical') && (
+                  <div>
+                    <h4 className='font-semibold text-gray-700 mb-2'>Theory with Practicals</h4>
+                    <ul className='space-y-3'>
+                      {forms.map((subj,idx)=>subj.type==='theory_practical' ? renderSubjectItem(subj,idx):null)}
+                    </ul>
+                    </div>
+                )}
+                {forms.some(f=>f.type==='other') && (
+                  <div>
+                    <h4 className='font-semibold text-gray-700 mb-2'>others</h4>
+                    <ul className='space-y-3'>
+                      {forms.map((subj,idx)=>subj.type==='other' ? renderSubjectItem(subj,idx):null)}
+                    </ul>
+                    </div>
+                )}
+                {forms.some(f=>f.type==='one_credit') && (
+                  <div>
+                    <h4 className='font-semibold text-gray-700 mb-2'>one Credit</h4>
+                    <ul className='space-y-3'>
+                      {forms.map((subj,idx)=>subj.type==='one_credit' ? renderSubjectItem(subj,idx):null)}
+                    </ul>
+                    </div>
+                )}
+              {forms.some(f=>f.type==='honors') && (
+                <div>
+                    <h4 className='font-semibold text-gray-700 mb-2'>Honors</h4>
+                    <ul className='space-y-3'>
+                      {forms.map((subj,idx)=> subj.type==='honors' ? renderSubjectItem(subj,idx):null)}
+                    </ul>
+                  </div>
+              )}
+
             </div>
           </div>
         </div>
