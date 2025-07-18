@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { generatedTimetableApi, facultyApi } from '../services/api';
-import { MdClass, MdDownload, MdEdit, MdChevronLeft, MdChevronRight } from 'react-icons/md';
+import { MdClass, MdDownload, MdEdit, MdChevronLeft, MdChevronRight, MdGroup } from 'react-icons/md';
 import { useNavigate } from 'react-router-dom';
 import { usePeriods } from '../context/PeriodsContext';
 
@@ -176,7 +176,7 @@ const ViewStudentTimetables: React.FC = () => {
           {/* Year-Section list */}
           {!listCollapsed && (
           <div className="space-y-3 ">
-            <button className="absolute -right-4 top-0 p-1 rounded-full bg-gray-100 hover:bg-gray-200" onClick={()=>setListCollapsed(true)} title="Hide list"><MdChevronLeft/></button>
+            <button className=" size-5 -right-4 top-0 p-1 rounded-full bg-gray-100 hover:bg-gray-200" onClick={()=>setListCollapsed(true)} title="Hide list"><MdChevronLeft/></button>
             {predefinedYearSections.map((ys) => {
               const key = `${ys.year}${ys.section}`;
               const isActive = selectedYS?.year === ys.year && selectedYS?.section === ys.section;
@@ -189,9 +189,9 @@ const ViewStudentTimetables: React.FC = () => {
                     ${hasTT ? 'bg-indigo-50 border-indigo-600 text-indigo-700' : 'bg-red-50 border-red-500 text-red-600'}
                     ${isActive ? 'ring-2 ring-indigo-700' : 'hover:bg-gray-50'}`}
                 >
-                  <MdClass className="text-2xl text-blue-600" />
+                  <MdGroup className="text-2xl text-blue-600" />
                   <div>
-                    <p className="font-medium text-gray-800">Year {ys.year} – Sec {ys.section}</p>
+                    <p className="font-medium text-gray-800">Year {ys.year} – Sec {ys.section}'s Time Table</p>
                   </div>
                 </button>
               );

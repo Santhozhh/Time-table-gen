@@ -114,10 +114,10 @@ const ViewFacultyTimetables: React.FC = () => {
       <div className={`grid grid-cols-1 ${listCollapsed ? '' : 'md:grid-cols-3'} gap-6`}>
         {/* Faculty list */}
         {!listCollapsed && (
-        <div className="space-y-3 relative">
+        <div className="space-y-3 ">
           {/* Collapse button */}
-          <button className="absolute -right-4 top-0 p-1 rounded-full bg-gray-100 hover:bg-gray-200" onClick={()=>setListCollapsed(true)} title="Hide list">
-            <MdChevronLeft />
+          <button className=" size-5 -right-4 top-0 p-1 rounded-full bg-gray-100 hover:bg-gray-200" onClick={()=>setListCollapsed(true)} title="Hide list">
+            <MdChevronLeft /> 
           </button>
 
           {['Professor','Associate Professor','Assistant Professor I','Assistant Professor II','Assistant Professor III'].map(gr=>{
