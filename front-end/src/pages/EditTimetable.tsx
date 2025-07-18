@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { MdAdd, MdSchedule, MdSchool, MdSave, MdDelete, MdChevronLeft, MdChevronRight } from 'react-icons/md';
+import { MdAdd, MdSchedule, MdSchool, MdSave, MdDelete, MdChevronLeft, MdChevronRight, MdClose } from 'react-icons/md';
 import { MdClass } from 'react-icons/md';
 import { generatedTimetableApi } from '../services/api';
+import { usePeriods } from '../context/PeriodsContext';
 
 interface TimetableForm {
   courseName: string;
@@ -13,6 +14,7 @@ interface TimetableForm {
   additionalFacultyId?: string;
   section: string;
   year: number;
+  id: string;
 }
 interface Faculty {
   _id: string;
@@ -30,9 +32,10 @@ interface TimetableCell {
   type: 'theory' | 'practical' | 'theory_practical' | 'one_credit' | 'honors' | 'other';
   section: string;
   year?: number;
+  subjectId: string;
 }
 type TimetableSlot = TimetableCell[];
-const days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const days = ['1','2','3','4','5','6'];
 
 const EditTimetable: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -43,7 +46,8 @@ const EditTimetable: React.FC = () => {
   const [fixedSection,setFixedSection]=useState<string>('A');
   // index for timetable navigation (reuse if needed later)
   const [listCollapsed,setListCollapsed]=useState(false);
-  const emptyMatrix = () => Array(6).fill(null).map(() => Array(7).fill(null).map(() => [] as TimetableSlot));
+  const { numPeriods: NUM_PERIODS } = usePeriods();
+  const emptyMatrix = () => Array(6).fill(null).map(() => Array(NUM_PERIODS).fill(null).map(() => [] as TimetableSlot));
   const [timetable, setTimetable] = useState<TimetableSlot[][]>(emptyMatrix());
   const [faculty, setFaculty] = useState<Faculty[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,7 +61,8 @@ const EditTimetable: React.FC = () => {
         setFaculty(await facRes.json());
         if (id) {
           const { data } = await generatedTimetableApi.getById(id);
-          const courseList = data.courses||[];
+          const genId = () => Math.random().toString(36).slice(2,10);
+          const courseList = (data.courses||[]).map((c:any)=> ({...c, id: c.id || c.subjectId || genId()}));
           setForms(courseList);
           if(courseList.length){
              setFixedYear(courseList[0].year||1);
@@ -83,6 +88,7 @@ const EditTimetable: React.FC = () => {
     setForms(newForms);
   };
 
+  const genId = () => Math.random().toString(36).slice(2,10);
   const addSubject = () => {
     setForms([
       ...forms,
@@ -95,6 +101,7 @@ const EditTimetable: React.FC = () => {
         additionalFacultyId: '',
         section: fixedSection,
         year: fixedYear,
+        id: genId(),
       },
     ]);
   };
@@ -127,6 +134,16 @@ const EditTimetable: React.FC = () => {
     const currentForm = forms[currentFormIndex];
     if(!currentForm) return;
 
+    const isPractical = currentForm.type === 'practical' || currentForm.type === 'theory_practical';
+    const blockLength = isPractical ? Math.max(1,currentForm.hoursPerWeek) : 1;
+    const slotIndices = Array.from({length:blockLength},(_,i)=>periodIdx+i);
+
+    // boundary check
+    if(slotIndices[slotIndices.length-1] >= NUM_PERIODS){
+      alert(`This subject requires ${blockLength} consecutive periods. Please choose an earlier period.`);
+      return;
+    }
+
     const newEntry: TimetableCell = {
       courseName: currentForm.courseName,
       courseCode: currentForm.courseCode,
@@ -134,21 +151,53 @@ const EditTimetable: React.FC = () => {
       additionalFacultyId: currentForm.additionalFacultyId,
       type: currentForm.type,
       section: currentForm.section,
-      year: currentForm.year
+      year: currentForm.year,
+      subjectId: currentForm.id
     };
 
+    const entryExistsInAll = slotIndices.every(colIdx =>
+      timetable[dayIdx][colIdx].some(s => s.subjectId === newEntry.subjectId)
+    );
+
     const newTT = timetable.map((day,rowIdx)=> day.map((slot,colIdx)=>{
-      if(rowIdx===dayIdx && colIdx===periodIdx){
-        const idx = slot.findIndex(s=> s.courseCode===newEntry.courseCode && s.section===newEntry.section && s.year===newEntry.year);
-        if(idx>=0){
-          const cloned=[...slot]; cloned.splice(idx,1); return cloned; // remove
+      if(rowIdx===dayIdx && slotIndices.includes(colIdx)){
+        if(entryExistsInAll){
+          return slot.filter(s=> s.subjectId!==newEntry.subjectId);
         }
-        return [...slot,newEntry]; // add
+        // Before adding, ensure weekly hours limit isn't exceeded; only evaluate on first slot.
+        if(colIdx === slotIndices[0]){
+          const currentHours = timetable.flat(2).filter(c=> c.subjectId===currentForm.id).length;
+          const hoursToAdd = slotIndices.length;
+          if(currentHours + hoursToAdd > currentForm.hoursPerWeek){
+             alert('All hours for this course have already been allocated!');
+             return slot;
+          }
+        }
+        // Avoid duplicate entry in slot
+        if(slot.some(s=> s.subjectId===newEntry.subjectId)) return slot;
+        return [...slot,newEntry];
       }
       return slot;
     }));
 
     setTimetable(newTT);
+  };
+
+  /* ------- Clear all allocations for a subject ------- */
+  const clearAllocations = (index:number)=>{
+    const subj = forms[index];
+    const newTT = timetable.map(day=> day.map(slot=> slot.filter(s=> s.subjectId!==subj.id)));
+    setTimetable(newTT);
+  };
+
+  // Remove single entry from timetable slot
+  const removeEntry = (dayIdx:number, periodIdx:number, entryIdx:number)=>{
+    setTimetable(prev=> prev.map((day,d)=> day.map((slot,p)=>{
+      if(d===dayIdx && p===periodIdx){
+        const newSlot=[...slot]; newSlot.splice(entryIdx,1); return newSlot;
+      }
+      return slot;
+    })));
   };
 
   /* ---------- Drag & Drop Helpers ---------- */
@@ -169,9 +218,30 @@ const EditTimetable: React.FC = () => {
     handleCellClick(dayIndex, periodIndex);
   };
 
+  // Helper to render subject item (shared)
+  const renderSubjectItem = (subj: TimetableForm, idx:number) => {
+     const allocated = timetable.flat(2).filter(c=> c.subjectId===subj.id).length;
+     const fully = allocated >= subj.hoursPerWeek && subj.hoursPerWeek>0;
+     let itemCls='subject-item cursor-move ';
+     if(idx===currentFormIndex) itemCls+='bg-indigo-50 border-indigo-400 ';
+     else if(fully) itemCls+='border-red-400 bg-red-50 ';
+     else itemCls+='bg-white ';
+     return (
+       <li key={idx} className={itemCls.trim()} draggable onDragStart={(e)=>handleDragStart(idx,e)} onClick={()=>setCurrentFormIndex(idx)}>
+         <div>
+           <p className="font-medium text-gray-800">{subj.courseName}</p>
+           <p className="text-sm text-blue-600">{subj.courseCode}</p>
+         </div>
+         <div className="text-sm text-gray-500 capitalize">{subj.type}</div>
+         <div className="text-xs text-gray-500">Hrs {allocated}/{subj.hoursPerWeek}</div>
+         <button onClick={(e)=>{e.stopPropagation(); clearAllocations(idx);}} title="Clear allocated periods" className="text-red-500 hover:text-red-700 text-lg"><MdDelete/></button>
+       </li>
+     );
+  };
+
   if (loading) return <p>Loading...</p>;
 
-  const totalPeriods = 42; // 6 days * 7 teaching periods
+  const totalPeriods = 6 * NUM_PERIODS; // total teaching periods
   const allocatedTotal = timetable.flat(2).filter(Boolean).length;
   const freePeriods = totalPeriods - allocatedTotal;
 
@@ -263,30 +333,23 @@ const EditTimetable: React.FC = () => {
             <table className="min-w-full border-collapse">
               <thead>
                 <tr>
-                  <th rowSpan={2} className="table-header align-middle">Day / Period</th>
-                  {[{type:'period',label:'Period 1'},{type:'period',label:'Period 2'},{type:'break',label:'Tea Break'},{type:'period',label:'Period 3'},{type:'period',label:'Period 4'},{type:'break',label:'Lunch'},{type:'period',label:'Period 5'},{type:'period',label:'Period 6'},{type:'break',label:'Tea Break'},{type:'period',label:'Period 7'}].map((h,i)=>(<th key={i} className={`table-header ${h.type==='break'?'bg-gray-50 text-gray-500 italic':''}`}>{h.label}</th>))}
-                </tr>
-                <tr>
-                  {['09:00 – 09:50','09:50 – 10:40','','11:00 – 11:50','11:50 – 12:40','','01:20 – 02:10','02:10 – 03:00','','03:20 – 04:10'].map((t,i)=>(<th key={i} className="table-header text-xs font-normal">{t}</th>))}
+                  <th rowSpan={1} className="table-header align-middle">Day / Period</th>
+                  {Array(NUM_PERIODS).fill(null).map((_,i)=>(<th key={i} className="table-header">Period {i+1}</th>))}
                 </tr>
               </thead>
               <tbody>
                 {days.map((day,dIdx)=>(
                   <tr key={day}>
                     <td className="table-header">{day}</td>
-                    {Array(10).fill(null).map((_,colIdx)=>{
-                      if(colIdx===2 || colIdx===8) return <td key={colIdx} className="table-cell bg-gray-50 text-center italic text-sm">Tea Break</td>;
-                      if(colIdx===5) return <td key={colIdx} className="table-cell bg-gray-50 text-center italic text-sm">Lunch</td>;
-                      let periodIdx:number;
-                      if(colIdx<2) periodIdx=colIdx;
-                      else if(colIdx<5) periodIdx=colIdx-1;
-                      else if(colIdx<8) periodIdx=colIdx-2;
-                      else periodIdx=6;
+                    {Array(NUM_PERIODS).fill(null).map((_,periodIdx)=>{
                       const slot = timetable[dIdx]?.[periodIdx] || [];
                       return (
-                        <td key={colIdx} className="table-cell cursor-pointer" onClick={()=>handleCellClick(dIdx,periodIdx)} onDragOver={handleDragOver} onDrop={(e)=>handleDrop(dIdx,periodIdx,e)}>
+                        <td key={periodIdx} className="table-cell cursor-pointer" onClick={()=>handleCellClick(dIdx,periodIdx)} onDragOver={handleDragOver} onDrop={(e)=>handleDrop(dIdx,periodIdx,e)}>
                           {slot.map((s,idx)=>(
-                            <div key={idx} className="space-y-1">
+                            <div key={idx} className="space-y-1 relative group">
+                              <button onClick={(e)=>{e.stopPropagation(); removeEntry(dIdx, periodIdx, idx);}} className="absolute top-0 right-0 p-0.5 hidden group-hover:block hover:bg-red-100 rounded" title="Remove">
+                                <MdClose className="text-red-600 text-xs" />
+                              </button>
                               <div className="font-medium text-gray-800 text-xs">{s.courseName}</div>
                               <div className="text-[10px] text-blue-600">{s.courseCode}</div>
                             </div>
@@ -304,31 +367,23 @@ const EditTimetable: React.FC = () => {
           <div className="mt-6">
             <div className="card p-6">
               <h3 className="text-xl font-semibold text-gray-800 mb-4">Subject List</h3>
+              {/* Theory */}
+              {forms.some(f=>f.type==='theory') && (
+                <div className="mb-6">
+                  <h4 className="font-semibold text-gray-700 mb-2">Theory</h4>
               <ul className="space-y-3">
-                {forms.map((subj, idx) => {
-                  const allocated = timetable.flat(2).filter(c=> c.courseCode===subj.courseCode && c.section===subj.section && c.year===subj.year).length;
-                  const fully = allocated >= subj.hoursPerWeek && subj.hoursPerWeek>0;
-                  let itemCls='subject-item cursor-move ';
-                  if(idx===currentFormIndex) itemCls+='bg-indigo-50 border-indigo-400 ';
-                  else if(fully) itemCls+='border-red-400 bg-red-50 ';
-                  else itemCls+='bg-white ';
-                  return (
-                  <li
-                    key={idx}
-                    className={itemCls.trim()}
-                    draggable
-                    onDragStart={(e)=>handleDragStart(idx,e)}
-                    onClick={()=>setCurrentFormIndex(idx)}
-                  >
+                    {forms.map((subj,idx)=> subj.type==='theory'? renderSubjectItem(subj,idx): null)}
+                  </ul>
+                </div>) }
+
+              {/* Practical & Others */}
+              {forms.some(f=>f.type!=='theory') && (
                     <div>
-                      <p className="font-medium text-gray-800">{subj.courseName}</p>
-                      <p className="text-sm text-blue-600">{subj.courseCode}</p>
-                    </div>
-                    <div className="text-sm text-gray-500 capitalize">{subj.type}</div>
-                    <div className="text-xs text-gray-500">Hrs {allocated}/{subj.hoursPerWeek}</div>
-                  </li>
-                  );})}
+                  <h4 className="font-semibold text-gray-700 mb-2">Practical & Others</h4>
+                  <ul className="space-y-3">
+                    {forms.map((subj,idx)=> subj.type!=='theory'? renderSubjectItem(subj,idx): null)}
               </ul>
+                </div>) }
             </div>
           </div>
         </div>

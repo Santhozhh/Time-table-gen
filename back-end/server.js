@@ -7,6 +7,7 @@ const connectDB = require('./config');
 const facultyRoutes = require('./routes/faculty');
 const timetableRoutes = require('./routes/timetable');
 const generatedTimetableRoutes = require('./routes/generatedTimetable');
+const settingsRoutes = require('./routes/settings');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -24,6 +25,7 @@ const startServer = async () => {
     app.use('/api/faculty', facultyRoutes);
     app.use('/api/timetable', timetableRoutes);
     app.use('/api/generated-timetables', generatedTimetableRoutes);
+    app.use('/api/settings', settingsRoutes);
 
     // Basic route
     app.get('/', (req, res) => {
@@ -38,8 +40,7 @@ const startServer = async () => {
 
     // Start server
     app.listen(PORT, () => {
-      console.log('\x1b[32m%s\x1b[0m', `🚀 Server running on port ${PORT}`);
-      console.log('\x1b[36m%s\x1b[0m', `📡 API endpoint: http://localhost:${PORT}`);
+      console.log( ` Server running on port ${PORT}`);
     });
   } catch (error) {
     console.error('\x1b[31m%s\x1b[0m', '❌ Failed to start server:', error.message);

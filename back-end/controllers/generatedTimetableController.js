@@ -1,4 +1,5 @@
 const GeneratedTimetable = require('../models/GeneratedTimetable');
+const constants = require('../constants');
 const ExcelJS = require('exceljs');
 
 // helper to detect faculty conflicts. Optionally exclude a timetable (when updating)
@@ -19,7 +20,7 @@ const hasFacultyConflict = async (newTimetable, excludeId = null) => {
   for (const oldTT of existing) {
     if (excludeId && String(oldTT._id) === String(excludeId)) continue; // skip comparing with itself
     for (let day = 0; day < 6; day++) {
-      for (let period = 0; period < 7; period++) {
+      for (let period = 0; period < constants.NUM_PERIODS; period++) {
         const newSlot = newTimetable[day]?.[period];
         const oldSlot = oldTT.timetable[day]?.[period];
         const newFacs = extractFacs(newSlot);
@@ -122,12 +123,12 @@ exports.exportExcel = async (req, res) => {
     const ws = wb.addWorksheet('Timetable');
 
     // Header rows
-    const days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-    ws.addRow(['Day/Period', ...Array.from({length:7},(_,i)=>`Period ${i+1}`)]).font = { bold: true };
+    const days = ['1','2','3','4','5','6'];
+    ws.addRow(['Day/Period', ...Array.from({length: constants.NUM_PERIODS},(_,i)=>`Period ${i+1}`)]).font = { bold: true };
 
     days.forEach((day, dIdx)=>{
       const rowData = [day];
-      for(let p=0;p<7;p++){
+      for(let p=0;p<constants.NUM_PERIODS;p++){
         const slot = tt.timetable[dIdx]?.[p];
         if(slot){
           const entries = Array.isArray(slot) ? slot : [slot];

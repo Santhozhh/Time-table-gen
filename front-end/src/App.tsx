@@ -2,11 +2,13 @@ import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react
 import { MdSchedule, MdPerson, MdGroup, MdEdit, MdChevronLeft, MdChevronRight, MdEmail } from 'react-icons/md';
 import { FaGraduationCap } from 'react-icons/fa';
 import { ToastProvider } from './components/ToastProvider';
+import { PeriodsProvider } from './context/PeriodsContext';
 import MakeTimetable from './pages/MakeTimetable';
 import ViewStudentTimetables from './pages/ViewStudentTimetables';
 import Home from './pages/Home';
 import ViewFacultyTimetables from './pages/ViewFacultyTimetables';
 import FacultyEdit from './pages/FacultyEdit';
+import EditPeriods from './pages/EditPeriods';
 import EditTimetable from './pages/EditTimetable';
 import React from 'react';
 
@@ -39,6 +41,7 @@ function App() {
   const [collapsed, setCollapsed] = React.useState(false);
   return (
     <ToastProvider>
+    <PeriodsProvider>
     <Router>
       <div className="flex min-h-screen bg-gray-50">
         {/* Sidebar */}
@@ -82,6 +85,14 @@ function App() {
                 text="Edit Faculty" collapsed={collapsed}
               />
             </li>
+            <li>
+              <NavLink
+                to="/edit-periods"
+                icon={<MdSchedule />}
+                text="Edit Periods / Time"
+                collapsed={collapsed}
+              />
+            </li>
           </ul>
           {!collapsed && (
           <div className="pt-6 mt-6 border-t border-gray-100">
@@ -120,6 +131,7 @@ function App() {
               <Route path="/view-student-timetables" element={<ViewStudentTimetables />} />
               <Route path="/view-faculty-timetables" element={<ViewFacultyTimetables />} />
               <Route path="/faculty-edit" element={<FacultyEdit />} />
+              <Route path="/edit-periods" element={<EditPeriods />} />
               <Route path="/edit-timetable/:id" element={<EditTimetable />} />
             </Routes>
           </div>
@@ -127,6 +139,7 @@ function App() {
         {/* Bottom controls inside sidebar handled above */}
       </div>
     </Router>
+    </PeriodsProvider>
     </ToastProvider>
   );
 }

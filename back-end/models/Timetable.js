@@ -27,9 +27,13 @@ const daySchema = new mongoose.Schema({
     validate: [
       {
         validator: function(periods) {
-          return periods.length <= 7; // Maximum 7 periods per day
+          const { NUM_PERIODS } = require('../constants');
+          return periods.length <= NUM_PERIODS; // Maximum periods per day
         },
-        message: 'Cannot exceed 7 periods per day'
+        message: function() {
+          const { NUM_PERIODS } = require('../constants');
+          return `Cannot exceed ${NUM_PERIODS} periods per day`;
+        }
       }
     ]
   }

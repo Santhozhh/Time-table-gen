@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { facultyApi, generatedTimetableApi } from '../services/api';
+import { usePeriods } from '../context/PeriodsContext';
 
 import { MdPerson, MdChevronLeft, MdChevronRight } from 'react-icons/md';
 
@@ -31,7 +32,8 @@ interface GeneratedTimetable {
 const ViewFacultyTimetables: React.FC = () => {
   const [faculty, setFaculty] = useState<Faculty[]>([]);
   const [selectedFaculty, setSelectedFaculty] = useState<Faculty | null>(null);
-  const [matrix, setMatrix] = useState<(TimetableCell | null)[][]>(Array(6).fill(null).map(() => Array(7).fill(null)));
+  const { numPeriods: NUM_PERIODS } = usePeriods();
+  const [matrix, setMatrix] = useState<(TimetableCell | null)[][]>(Array(6).fill(null).map(() => Array(NUM_PERIODS).fill(null)));
   const [allTimetables, setAllTimetables] = useState<GeneratedTimetable[]>([]);
   // removed allocatedCount state; compute on render
   const [loading, setLoading] = useState(true);
@@ -57,7 +59,7 @@ const ViewFacultyTimetables: React.FC = () => {
 
   useEffect(() => {
     if(selectedFaculty){
-      const combined:Array<Array<TimetableCell|null>> = Array(6).fill(null).map(()=>Array(7).fill(null));
+      const combined:Array<Array<TimetableCell|null>> = Array(6).fill(null).map(()=>Array(NUM_PERIODS).fill(null));
       allTimetables.forEach(tt=>{
         tt.timetable.forEach((dayRow,dIdx)=>{
           dayRow.forEach((slot,pIdx)=>{
@@ -126,7 +128,9 @@ const ViewFacultyTimetables: React.FC = () => {
                 <h4 className="px-2 py-1 text-xs font-semibold text-gray-500 uppercase tracking-wider">{gr}</h4>
                 {list.map(f=>{
                   const allocated = getAllocatedCount(f._id);
-                  const limit = typeof f.maxHoursPerWeek==='number' ? f.maxHoursPerWeek : 42;
+                  const limit = typeof f.maxHoursPerWeek==='number'
+                    ? (f.maxHoursPerWeek === 42 ? 6*NUM_PERIODS : f.maxHoursPerWeek)
+                    : (6*NUM_PERIODS);
                   const free = Math.max(limit - allocated,0);
                   return (
             <button
@@ -166,40 +170,39 @@ const ViewFacultyTimetables: React.FC = () => {
                 
                 Timetable for {selectedFaculty.name}
                 <span className="text-sm font-medium text-indigo-700 bg-indigo-50 px-3 py-1 rounded-full">Allocated: {allocatedCount}</span>
-                {selectedFaculty.maxHoursPerWeek && <span className="text-sm font-medium text-green-700 bg-green-50 px-3 py-1 rounded-full">Free: {Math.max(selectedFaculty.maxHoursPerWeek-allocatedCount,0)}</span>}
+                {(() => {
+                  let lim = typeof selectedFaculty.maxHoursPerWeek === 'number'
+                    ? (selectedFaculty.maxHoursPerWeek === 42 ? 6*NUM_PERIODS : selectedFaculty.maxHoursPerWeek)
+                    : 6*NUM_PERIODS;
+                  return (
+                    <span className="text-sm font-medium text-green-700 bg-green-50 px-3 py-1 rounded-full">Free: {Math.max(lim-allocatedCount,0)}</span>
+                  );
+                })()}
                 
               </h3>
               <table className="w-full border-collapse">
                 <thead>
                   <tr>
-                    <th rowSpan={2} className="table-header align-middle">Day / Period</th>
-                    {[{type:'period',label:'Period 1'},{type:'period',label:'Period 2'},{type:'break',label:'Tea Break'},{type:'period',label:'Period 3'},{type:'period',label:'Period 4'},{type:'break',label:'Lunch'},{type:'period',label:'Period 5'},{type:'period',label:'Period 6'},{type:'break',label:'Tea Break'},{type:'period',label:'Period 7'}].map((h,i)=>(
-                      <th key={i} className={`table-header ${h.type==='break'?'bg-gray-50 text-gray-500 italic':''}`}>{h.label}</th>
-                    ))}
-                  </tr>
-                  <tr>
-                    {['09:00 – 09:50','09:50 – 10:40','','11:00 – 11:50','11:50 – 12:40','','01:20 – 02:10','02:10 – 03:00','','03:20 – 04:10'].map((t,i)=>(
-                      <th key={i} className="table-header text-xs font-normal">{t}</th>
-                    ))}
+                    <th className="table-header align-middle">Day / Period</th>
+                    {Array(NUM_PERIODS).fill(null).map((_,i)=>(<th key={i} className="table-header">Period {i+1}</th>))}
                   </tr>
                 </thead>
                 <tbody>
-                  {['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'].map((day,dIdx)=>(
+                  {['1','2','3','4','5','6'].map((day,dIdx)=>(
                     <tr key={day}>
                       <td className="table-header">{day}</td>
-                      {Array(10).fill(null).map((_,colIdx)=>{
-                        if(colIdx===2 || colIdx===8) return <td key={colIdx} className="table-cell bg-gray-50 text-center italic text-sm">Tea Break</td>;
-                        if(colIdx===5) return <td key={colIdx} className="table-cell bg-gray-50 text-center italic text-sm">Lunch</td>;
-                        let periodIdx:number;
-                        if(colIdx<2) periodIdx=colIdx; // 0,1
-                        else if(colIdx<5) periodIdx=colIdx-1; //3,4 => 2,3
-                        else if(colIdx<8) periodIdx=colIdx-2; //6,7 =>4,5
-                        else periodIdx=6; // col 9 => Period 7
-                        const slot = matrix[dIdx]?.[periodIdx] || [];
+                      {Array(NUM_PERIODS).fill(null).map((_,periodIdx)=>{
+                        const slot = matrix[dIdx]?.[periodIdx] || null;
                         return (
-                          <td key={colIdx} className="table-cell">
-                            {slot && getTimetableCell(dIdx,periodIdx)}
-                        </td>
+                          <td key={periodIdx} className="table-cell">
+                            {slot ? (
+                              <div className="space-y-1">
+                                <div className="font-medium text-gray-800 text-xs">{slot.courseName}</div>
+                                 <div className="text-[10px] text-blue-600">Year :{slot.year }</div>
+                                  <div className="text-[10px] text-blue-600">Sec : {slot.section}</div>
+                              </div>
+                            ) : null}
+                          </td>
                         );
                       })}
                     </tr>

@@ -8,10 +8,7 @@ const connectDB = async () => {
   try {
     const conn = await mongoose.connect(MONGODB_URI);
 
-    console.log('\x1b[32m%s\x1b[0m', '🎯 MongoDB Connected Successfully!');
-    console.log('\x1b[36m%s\x1b[0m', `👉 Connected to Database: ${conn.connection.db.databaseName}`);
-    console.log('\x1b[36m%s\x1b[0m', `👉 Host: ${conn.connection.host}`);
-    console.log('\x1b[36m%s\x1b[0m', `👉 Port: ${conn.connection.port}`);
+    console.log('MongoDB Connected Successfully!');
     
     // Log to indicate we're using a different database in the same cluster
     if (conn.connection.db.databaseName === 'timetable_db') {

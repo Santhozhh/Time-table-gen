@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { generatedTimetableApi, facultyApi } from '../services/api';
 import { MdClass, MdDownload, MdEdit, MdChevronLeft, MdChevronRight } from 'react-icons/md';
 import { useNavigate } from 'react-router-dom';
+import { usePeriods } from '../context/PeriodsContext';
 
 interface TimetableCell {
   courseName: string;
@@ -36,8 +37,9 @@ const predefinedYearSections: YearSection[] = (() => {
 const ViewStudentTimetables: React.FC = () => {
   const [timetables, setTimetables] = useState<GeneratedTimetable[]>([]);
   const [faculty, setFaculty] = useState<any[]>([]);
-  const [selectedYS, setSelectedYS] = useState<YearSection | null>(predefinedYearSections[0]);
-  const [matrix, setMatrix] = useState<(TimetableCell | null)[][]>(Array(6).fill(null).map(() => Array(7).fill(null)));
+  const [selectedYS, setSelectedYS] = useState<YearSection >(predefinedYearSections[0]);
+  const { numPeriods: NUM_PERIODS } = usePeriods();
+  const [matrix, setMatrix] = useState<(TimetableCell | null)[][]>(Array(6).fill(null).map(() => Array(NUM_PERIODS).fill(null)));
   const [loading, setLoading] = useState(true);
   const [selectedTimetable, setSelectedTimetable] = useState<GeneratedTimetable | null>(null);
   const [listCollapsed, setListCollapsed] = useState(false);
@@ -110,7 +112,7 @@ const ViewStudentTimetables: React.FC = () => {
         return;
     }
     // Not found
-    setMatrix(Array(6).fill(null).map(() => Array(7).fill(null)));
+    setMatrix(Array(6).fill(null).map(() => Array(NUM_PERIODS).fill(null)));
     setSelectedTimetable(null);
   }, [selectedYS, timetables]);
 
@@ -173,7 +175,7 @@ const ViewStudentTimetables: React.FC = () => {
         <div className={`grid grid-cols-1 ${listCollapsed?'':'md:grid-cols-3'} gap-6`}>
           {/* Year-Section list */}
           {!listCollapsed && (
-          <div className="space-y-3 relative">
+          <div className="space-y-3 ">
             <button className="absolute -right-4 top-0 p-1 rounded-full bg-gray-100 hover:bg-gray-200" onClick={()=>setListCollapsed(true)} title="Hide list"><MdChevronLeft/></button>
             {predefinedYearSections.map((ys) => {
               const key = `${ys.year}${ys.section}`;
@@ -227,35 +229,19 @@ const ViewStudentTimetables: React.FC = () => {
                 <table className="w-full border-collapse">
                   <thead>
                     <tr>
-                      <th rowSpan={2} className="table-header align-middle">Day / Period</th>
-                      {[{type:'period',label:'Period 1'},{type:'period',label:'Period 2'},{type:'break',label:'Tea Break'},{type:'period',label:'Period 3'},{type:'period',label:'Period 4'},{type:'break',label:'Lunch'},{type:'period',label:'Period 5'},{type:'period',label:'Period 6'},{type:'break',label:'Tea Break'},{type:'period',label:'Period 7'}].map((h,i)=>(
-                        <th key={i} className={`table-header ${h.type==='break'?'bg-gray-50 text-gray-500 italic':''}`}>{h.label}</th>
-                      ))}
-                    </tr>
-                    <tr>
-                      {['09:00 – 09:50','09:50 – 10:40','','11:00 – 11:50','11:50 – 12:40','','01:20 – 02:10','02:10 – 03:00','','03:20 – 04:10'].map((t,i)=>(
-                        <th key={i} className="table-header text-xs font-normal">{t}</th>
-                        ))}
+                      <th className="table-header align-middle">Day / Period</th>
+                      {Array(NUM_PERIODS).fill(null).map((_,i)=>(<th key={i} className="table-header">Period {i+1}</th>))}
                     </tr>
                   </thead>
                   <tbody>
-                    {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"].map((day, dIdx) => (
+                    {["1", "2", "3", "4", "5", "6"].map((day, dIdx) => (
                       <tr key={day}>
                         <td className="table-header">{day}</td>
-                        {Array(10).fill(null).map((_, colIdx)=>{
-                          if(colIdx===2 || colIdx===8) return <td key={colIdx} className="table-cell bg-gray-50 text-center italic text-sm">Tea Break</td>;
-                          if(colIdx===5) return <td key={colIdx} className="table-cell bg-gray-50 text-center italic text-sm">Lunch</td>;
-                          let periodIndex:number;
-                          if(colIdx<2) periodIndex=colIdx;
-                          else if(colIdx<5) periodIndex=colIdx-1;
-                          else if(colIdx<8) periodIndex=colIdx-2;
-                          else periodIndex=6;
-                          return (
-                            <td key={colIdx} className="table-cell">
-                              {getCellContent(dIdx, periodIndex)}
-                            </td>
-                          );
-                        })}
+                        {Array(NUM_PERIODS).fill(null).map((_,periodIdx)=> (
+                             <td key={periodIdx} className="table-cell">
+                               {getCellContent(dIdx, periodIdx)}
+                             </td>
+                           ))}
                       </tr>
                     ))}
                   </tbody>
