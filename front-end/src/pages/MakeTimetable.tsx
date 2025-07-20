@@ -111,6 +111,7 @@ const MakeTimetable: React.FC = () => {
     if (name === 'year' || name === 'hoursPerWeek') {
       parsed = parseInt(value, 10) || 0;
     }
+    const prevType = newForms[index].type;
     newForms[index] = {
       ...newForms[index],
       [name]: parsed
@@ -122,6 +123,21 @@ const MakeTimetable: React.FC = () => {
       }
     }
     setForms(newForms);
+    if(name==='type' && (prevType==='practical' || prevType==='theory_practical') && !['practical','theory_practical'].includes(parsed)){
+      const subjId = newForms[index].id;
+      setTimetable(prev=> prev.map(day=>{
+        let hasFirst=false;
+        return day.map(slot=>{
+          const filtered = slot.filter(s=> s.subjectId!==subjId) as TimetableSlot;
+          if(!hasFirst && slot.some(s=> s.subjectId===subjId)){
+            const first = slot.find(s=> s.subjectId===subjId)!;
+            filtered.push(first);
+            hasFirst = true;
+          }
+          return filtered;
+        }) as TimetableSlot[];
+      }));
+    }
     if(index===currentFormIndex && (e.target.name==='facultyId')){
       computeUnavailable(e.target.value);
     }
@@ -150,6 +166,7 @@ const MakeTimetable: React.FC = () => {
   };
 
   const removeSubject = (index: number) => {
+    const subjId = forms[index].id;
     if (forms.length > 1) {
       const newForms = forms.filter((_, i) => i !== index);
       setForms(newForms);
@@ -157,7 +174,27 @@ const MakeTimetable: React.FC = () => {
         setCurrentFormIndex(currentFormIndex - 1);
       }
     }
+    // clear allocations for this subject
+    setTimetable(prev=> prev.map(day=>day.map(slot=> slot.filter(s=> s.subjectId!==subjId))));
   };
+
+  /* -------- Persist state to sessionStorage -------- */
+  // Load saved draft on mount
+  useEffect(()=>{
+    const saved = sessionStorage.getItem('makeTT_draft');
+    if(saved){
+      try{
+        const {forms: f, timetable: tt} = JSON.parse(saved);
+        if(Array.isArray(f)) setForms(f);
+        if(Array.isArray(tt)) setTimetable(tt);
+      }catch(e){/* ignore */}
+    }
+  },[]);
+
+  // Save on change
+  useEffect(()=>{
+    sessionStorage.setItem('makeTT_draft', JSON.stringify({forms, timetable}));
+  },[forms, timetable]);
 
   const handleCellClick = (dayIndex: number, periodIndex: number) => {
     const currentForm = forms[currentFormIndex];
@@ -561,18 +598,19 @@ const MakeTimetable: React.FC = () => {
                             );
                             periodIndex += span;
                           }else{
+                            const emptyIdx = periodIndex;
                             cells.push(
-                              <td key={periodIndex}
-                                  onClick={()=>handleCellClick(dayIndex, periodIndex)}
+                              <td key={emptyIdx}
+                                  onClick={()=>handleCellClick(dayIndex, emptyIdx)}
                                   onDragOver={handleDragOver}
-                                  onDrop={(e)=>handleDrop(dayIndex, periodIndex, e)}
+                                  onDrop={(e)=>handleDrop(dayIndex, emptyIdx, e)}
                                   className={`table-cell-interactive ${isUnavailable ? 'bg-red-50/60 cursor-not-allowed' : 'bg-white'}`}
                               >
                                 {isUnavailable && (
                               <div className="space-y-1 opacity-70 text-red-700">
                                 <div className="font-medium">{unavailable[dayIndex][periodIndex]?.courseName}</div>
                                 <div className="text-sm">{unavailable[dayIndex][periodIndex]?.courseCode}</div>
-                                <div className="text-xs">Sec {unavailable[dayIndex][periodIndex]?.section}</div>
+                                <div className="text-xs">Year {unavailable[dayIndex][periodIndex]?.year} – Sec {unavailable[dayIndex][periodIndex]?.section}</div>
                               </div>
                           )}
                         </td>

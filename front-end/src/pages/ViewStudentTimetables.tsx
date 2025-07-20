@@ -255,7 +255,7 @@ const ViewStudentTimetables: React.FC = () => {
                               cells.push(
                                 <td key={p} colSpan={span} className="table-cell animate-pop" style={{animationDelay:`${p*40}ms`}}>
                                   {getCellContent(dIdx, p)}
-                                </td>
+                             </td>
                               );
                               p += span;
                             }else{
