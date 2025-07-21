@@ -425,7 +425,7 @@ const EditTimetable: React.FC = () => {
                 </div>) }
 
               {/* Practical & Others */}
-              {forms.some(f=>f.type='practical') && (
+              {forms.some(f=>f.type==='practical') && (
                     <div>
                   <h4 className="font-semibold text-gray-700 mb-2">Practical </h4>
                   <ul className="space-y-3">
