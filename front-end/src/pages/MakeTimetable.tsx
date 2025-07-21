@@ -578,7 +578,6 @@ const MakeTimetable: React.FC = () => {
                         const slot = timetable[dayIndex][periodIndex];
                         const isUnavailable = unavailable[dayIndex][periodIndex];
 
-<<<<<<< HEAD
                         if (slot.length) {
                           // create signature using subjectIds (assuming same subject repeated)
                           const sig = slot.map(s => s.subjectId).sort().join('|');
@@ -590,64 +589,6 @@ const MakeTimetable: React.FC = () => {
                             if (nextSig === sig && sig) {
                               span++;
                             } else break;
-=======
-                          if(slot.length){
-                            // create signature using subjectIds (assuming same subject repeated)
-                            const sig = slot.map(s=>s.subjectId).sort().join('|');
-                            let span = 1;
-                            const startIdx = periodIndex; /* capture start index */
-                            while(periodIndex+span < NUM_PERIODS){
-                              const nextSlot = timetable[dayIndex][periodIndex+span];
-                              const nextSig = nextSlot.map(s=>s.subjectId).sort().join('|');
-                              if(nextSig === sig && sig){
-                                span++;
-                              }else break;
-                            }
-                            cells.push(
-                              <td key={startIdx}
-                                  colSpan={span}
-                                  onClick={()=>handleCellClick(dayIndex, startIdx)}
-                          onDragOver={handleDragOver}
-                                  onDrop={(e)=>handleDrop(dayIndex, startIdx, e)}
-                                  className={`table-cell-interactive bg-blue-50/50`}
-                        >
-                            <div className="space-y-1">
-                                  {slot.map((sub,idx)=> (
-                                <div key={idx} className="border-b last:border-none pb-1 mb-1 last:pb-0 last:mb-0 relative group">
-                                      <button onClick={(e)=>{e.stopPropagation(); removeEntry(dayIndex, startIdx, idx);}} className="absolute top-0 right-0 p-0.5 rounded hover:bg-red-100 hidden group-hover:block" title="Remove">
-                                    <MdClose className="text-red-600 text-xs" />
-                                  </button>
-                                  <div className="font-medium text-gray-800">{sub.courseName}</div>
-                                  <div className="text-sm text-[#4169E1]">{sub.courseCode}</div>
-                                  <div className="text-xs text-gray-500">
-                                    {[sub.facultyId, sub.additionalFacultyId].filter(Boolean).map(id=>faculty.find(f=>f._id===id)?.name).filter(Boolean).join(', ')} - Sec {sub.year}{sub.section}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                              </td>
-                            );
-                            periodIndex += span;
-                          }else{
-                            const emptyIdx = periodIndex;
-                            cells.push(
-                              <td key={emptyIdx}
-                                  onClick={()=>handleCellClick(dayIndex, emptyIdx)}
-                                  onDragOver={handleDragOver}
-                                  onDrop={(e)=>handleDrop(dayIndex, emptyIdx, e)}
-                                  className={`table-cell-interactive ${isUnavailable ? 'bg-red-50/60 cursor-not-allowed' : 'bg-white'}`}
-                              >
-                                {isUnavailable && (
-                              <div className="space-y-1 opacity-70 text-red-700">
-                                <div className="font-medium">{unavailable[dayIndex][periodIndex]?.courseName}</div>
-                                <div className="text-sm">{unavailable[dayIndex][periodIndex]?.courseCode}</div>
-                                <div className="text-xs">Year {unavailable[dayIndex][periodIndex]?.year} – Sec {unavailable[dayIndex][periodIndex]?.section}</div>
-                              </div>
-                          )}
-                        </td>
-                      );
-                            periodIndex++;
->>>>>>> 74df81e5ad8460ec85a52f90e0b844ebf4e5c555
                           }
                           cells.push(
                             <td key={startIdx}

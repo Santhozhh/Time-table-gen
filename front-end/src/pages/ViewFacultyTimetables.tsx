@@ -110,11 +110,7 @@ const ViewFacultyTimetables: React.FC = () => {
             <MdChevronLeft /> 
           </button>
 
-<<<<<<< HEAD
           {['Professor/HoD','Professor','Associate Professor','Assistant Professor I','Assistant Professor II','Assistant Professor III'].map(gr=>{
-=======
-          {['Professor','Professor/HoD','Associate Professor','Assistant Professor I','Assistant Professor II','Assistant Professor III'].map(gr=>{
->>>>>>> 74df81e5ad8460ec85a52f90e0b844ebf4e5c555
             const list = faculty.filter(fc=>fc.grade===gr);
             if(!list.length) return null;
             return (
