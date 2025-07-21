@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { MdAdd, MdSchedule, MdSchool, MdSave, MdDelete, MdChevronLeft, MdChevronRight, MdClose } from 'react-icons/md';
+import { MdAdd, MdSchedule, MdSchool, MdSave, MdDelete,  MdClose } from 'react-icons/md';
 import { MdClass } from 'react-icons/md';
 import { generatedTimetableApi } from '../services/api';
 import { usePeriods } from '../context/PeriodsContext';
@@ -45,7 +45,6 @@ const EditTimetable: React.FC = () => {
   const [fixedYear,setFixedYear]=useState<number>(1);
   const [fixedSection,setFixedSection]=useState<string>('A');
   // index for timetable navigation (reuse if needed later)
-  const [listCollapsed,setListCollapsed]=useState(false);
   const { numPeriods: NUM_PERIODS } = usePeriods();
   const emptyMatrix = () => Array(6).fill(null).map(() => Array(NUM_PERIODS).fill(null).map(() => [] as TimetableSlot));
   const [timetable, setTimetable] = useState<TimetableSlot[][]>(emptyMatrix());
@@ -82,10 +81,29 @@ const EditTimetable: React.FC = () => {
   const handleInputChange = (index: number, e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     const newForms = [...forms];
+    const prevType = newForms[index].type;
     let parsed: any = value;
     if(name==='hoursPerWeek' || name==='year') parsed = parseInt(value,10)||0;
     newForms[index] = { ...newForms[index], [name]: parsed } as TimetableForm;
     setForms(newForms);
+
+    // If type changed from practical-like to theory/other, trim multi-slot allocations
+    if(name==='type' && (prevType==='practical' || prevType==='theory_practical') && !['practical','theory_practical'].includes(parsed)){
+      const subjId = newForms[index].id;
+      setTimetable(prev=> prev.map(day=>{
+        let hasFirst=false;
+        return day.map(slot=>{
+          const filtered = slot.filter(s=> s.subjectId!==subjId) as TimetableSlot;
+          if(!hasFirst && slot.some(s=> s.subjectId===subjId)){
+            // keep first occurrence in this day
+            const first = slot.find(s=> s.subjectId===subjId)!;
+            filtered.push(first);
+            hasFirst=true;
+          }
+          return filtered;
+        }) as TimetableSlot[];
+      }));
+    }
   };
 
   const genId = () => Math.random().toString(36).slice(2,10);
@@ -107,7 +125,11 @@ const EditTimetable: React.FC = () => {
   };
 
   const removeSubject = (idx: number) => {
+    const subjId = forms[idx].id;
+    // Remove form
     setForms(forms.filter((_, i) => i !== idx));
+    // Remove all allocations tied to that subject from timetable
+    setTimetable(prev => prev.map(day => day.map(slot => slot.filter(s => s.subjectId !== subjId))));
   };
 
   const handleUpdate = async () => {
@@ -373,8 +395,9 @@ const EditTimetable: React.FC = () => {
                           );
                           periodIdx += span;
                         }else{
+                          const emptyIdx = periodIdx;
                           cells.push(
-                            <td key={periodIdx} className="table-cell cursor-pointer" onClick={()=>handleCellClick(dIdx,periodIdx)} onDragOver={handleDragOver} onDrop={(e)=>handleDrop(dIdx,periodIdx,e)} />
+                            <td key={emptyIdx} className="table-cell cursor-pointer" onClick={()=>handleCellClick(dIdx,emptyIdx)} onDragOver={handleDragOver} onDrop={(e)=>handleDrop(dIdx,emptyIdx,e)} />
                           );
                           periodIdx++;
                         }
