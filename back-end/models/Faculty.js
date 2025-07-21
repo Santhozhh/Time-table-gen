@@ -8,7 +8,7 @@ const facultySchema = new mongoose.Schema({
   },
   grade: {
     type: String,
-    enum: ['Professor','Associate Professor','Assistant Professor I','Assistant Professor II','Assistant Professor III'],
+    enum: ['Professor/HoD','Professor','Associate Professor','Assistant Professor I','Assistant Professor II','Assistant Professor III'],
     default: 'Assistant Professor I'
   },
   code: {

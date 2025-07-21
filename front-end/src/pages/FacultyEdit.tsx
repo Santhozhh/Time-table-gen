@@ -21,6 +21,7 @@ const SPECIALIZATIONS = [
 ];
 
 const GRADES = [
+  'Professor/HoD',
   'Professor',
   'Associate Professor',
   'Assistant Professor I',

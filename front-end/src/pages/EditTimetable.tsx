@@ -290,7 +290,6 @@ const EditTimetable: React.FC = () => {
                   <select name="type" value={form.type} onChange={(e)=>handleInputChange(idx,e)} className="input-field">
                     <option value="theory">Theory</option>
                     <option value="practical">Practical</option>
-                    <option value="theory_practical">Theory + Practical</option>
                     <option value="one_credit">One Credit</option>
                     <option value="honors">Honors</option>
                     <option value="other">Other</option>
@@ -402,7 +401,7 @@ const EditTimetable: React.FC = () => {
                 </div>) }
 
               {/* Practical & Others */}
-              {forms.some(f=>f.type='practical') && (
+              {forms.some(f=>f.type==='practical') && (
                     <div>
                   <h4 className="font-semibold text-gray-700 mb-2">Practical </h4>
                   <ul className="space-y-3">

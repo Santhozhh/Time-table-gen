@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { MdAdd, MdSchedule, MdSchool,  MdPlayArrow, MdSave, MdDelete, MdClose } from 'react-icons/md';
 import { generatedTimetableApi } from '../services/api';
 import { usePeriods } from '../context/PeriodsContext';
+import Select from 'react-select';
 
 interface TimetableForm {
   courseName: string;
@@ -391,7 +392,6 @@ const MakeTimetable: React.FC = () => {
                     >
                       <option value="theory">Theory</option>
                       <option value="practical">Practical</option>
-                      <option value="theory_practical">Theory + Practical</option>
                       <option value="one_credit">One Credit Course</option>
                       <option value="honors">Honors</option>
                       <option value="other">Other</option>
@@ -415,29 +415,46 @@ const MakeTimetable: React.FC = () => {
 
                   <div className="form-group">
                     <label className="form-label">{form.type==='honors' ? 'Ordinary Faculty' : 'Faculty'}</label>
-                    <select
+                    <Select
                       name="facultyId"
-                      value={form.facultyId}
-                      onChange={(e) => handleInputChange(index, e)}
-                      required
-                      className="input-field"
-                    >
-                      <option value="">Select Faculty</option>
-                      {faculty.map((f) => (
-                        <option key={f._id} value={f._id}>
-                          {f.name} {f.grade ? `(${f.grade})` : ''}
-                        </option>
-                      ))}
-                    </select>
+                      value={faculty.find(f => f._id === form.facultyId) ? { value: form.facultyId, label: faculty.find(f => f._id === form.facultyId)?.name } : null}
+                      onChange={option => {
+                        const value = option ? option.value : '';
+                        setForms(prev => {
+                          const newForms = [...prev];
+                          newForms[index] = { ...newForms[index], facultyId: value };
+                          return newForms;
+                        });
+                        if(index === currentFormIndex) {
+                          computeUnavailable(value);
+                        }
+                      }}
+                      options={faculty.map(f => ({ value: f._id, label: `${f.name}${f.grade ? ` (${f.grade})` : ''}` }))}
+                      classNamePrefix="react-select"
+                      isClearable
+                      placeholder="Select Faculty..."
+                    />
                   </div>
 
                   {(form.type==='practical' || form.type==='theory_practical' || form.type==='honors') && (
                     <div className="form-group">
                       <label className="form-label">{form.type==='honors' ? 'Honors Faculty' : 'Additional Faculty (Practical)'}</label>
-                      <select name="additionalFacultyId" value={form.additionalFacultyId} onChange={(e)=>handleInputChange(index,e)} required className="input-field">
-                        <option value="">Select Faculty</option>
-                        {faculty.map(f=>(<option key={f._id} value={f._id}>{f.name} {f.grade ? `(${f.grade})` : ''}</option>))}
-                      </select>
+                      <Select
+                        name="additionalFacultyId"
+                        value={faculty.find(f => f._id === form.additionalFacultyId) ? { value: form.additionalFacultyId, label: faculty.find(f => f._id === form.additionalFacultyId)?.name } : null}
+                        onChange={option => {
+                          const value = option ? option.value : '';
+                          setForms(prev => {
+                            const newForms = [...prev];
+                            newForms[index] = { ...newForms[index], additionalFacultyId: value };
+                            return newForms;
+                          });
+                        }}
+                        options={faculty.map(f => ({ value: f._id, label: `${f.name}${f.grade ? ` (${f.grade})` : ''}` }))}
+                        classNamePrefix="react-select"
+                        isClearable
+                        placeholder="Select Faculty..."
+                      />
                     </div>
                   )}
 
@@ -513,75 +530,77 @@ const MakeTimetable: React.FC = () => {
                 {/* Optional second header row removed for simplicity when periods are dynamic */}
               </thead>
               <tbody>
-                {['1', '2', '3', '4', '5', '6'].map((day, dayIndex) => (
+                {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map((day, dayIndex) => (
                   <tr key={day}>
                     <td className="table-header">{day}</td>
-                     {/* Render cells with merging (practicals) */}
-                     {(()=>{
-                        const cells:JSX.Element[] = [];
-                        for(let periodIndex=0; periodIndex<NUM_PERIODS;){
-                      const slot = timetable[dayIndex][periodIndex];
-                          const isUnavailable = unavailable[dayIndex][periodIndex];
+                    {/* Render cells with merging (practicals) */}
+                    {(() => {
+                      const cells: JSX.Element[] = [];
+                      let periodIndex = 0;
+                      while (periodIndex < NUM_PERIODS) {
+                        const slot = timetable[dayIndex][periodIndex];
+                        const isUnavailable = unavailable[dayIndex][periodIndex];
 
-                          if(slot.length){
-                            // create signature using subjectIds (assuming same subject repeated)
-                            const sig = slot.map(s=>s.subjectId).sort().join('|');
-                            let span = 1;
-                            const startIdx = periodIndex; /* capture start index */
-                            while(periodIndex+span < NUM_PERIODS){
-                              const nextSlot = timetable[dayIndex][periodIndex+span];
-                              const nextSig = nextSlot.map(s=>s.subjectId).sort().join('|');
-                              if(nextSig === sig && sig){
-                                span++;
-                              }else break;
-                            }
-                            cells.push(
-                              <td key={startIdx}
-                                  colSpan={span}
-                                  onClick={()=>handleCellClick(dayIndex, startIdx)}
-                          onDragOver={handleDragOver}
-                                  onDrop={(e)=>handleDrop(dayIndex, startIdx, e)}
-                                  className={`table-cell-interactive bg-blue-50/50`}
-                        >
-                            <div className="space-y-1">
-                                  {slot.map((sub,idx)=> (
-                                <div key={idx} className="border-b last:border-none pb-1 mb-1 last:pb-0 last:mb-0 relative group">
-                                      <button onClick={(e)=>{e.stopPropagation(); removeEntry(dayIndex, startIdx, idx);}} className="absolute top-0 right-0 p-0.5 rounded hover:bg-red-100 hidden group-hover:block" title="Remove">
-                                    <MdClose className="text-red-600 text-xs" />
-                                  </button>
-                                  <div className="font-medium text-gray-800">{sub.courseName}</div>
-                                  <div className="text-sm text-[#4169E1]">{sub.courseCode}</div>
-                                  <div className="text-xs text-gray-500">
-                                    {[sub.facultyId, sub.additionalFacultyId].filter(Boolean).map(id=>faculty.find(f=>f._id===id)?.name).filter(Boolean).join(', ')} - Sec {sub.year}{sub.section}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                              </td>
-                            );
-                            periodIndex += span;
-                          }else{
-                            cells.push(
-                              <td key={periodIndex}
-                                  onClick={()=>handleCellClick(dayIndex, periodIndex)}
-                                  onDragOver={handleDragOver}
-                                  onDrop={(e)=>handleDrop(dayIndex, periodIndex, e)}
-                                  className={`table-cell-interactive ${isUnavailable ? 'bg-red-50/60 cursor-not-allowed' : 'bg-white'}`}
-                              >
-                                {isUnavailable && (
-                              <div className="space-y-1 opacity-70 text-red-700">
-                                <div className="font-medium">{unavailable[dayIndex][periodIndex]?.courseName}</div>
-                                <div className="text-sm">{unavailable[dayIndex][periodIndex]?.courseCode}</div>
-                                <div className="text-xs">Sec {unavailable[dayIndex][periodIndex]?.section}</div>
-                              </div>
-                          )}
-                        </td>
-                      );
-                            periodIndex++;
+                        if (slot.length) {
+                          // create signature using subjectIds (assuming same subject repeated)
+                          const sig = slot.map(s => s.subjectId).sort().join('|');
+                          let span = 1;
+                          const startIdx = periodIndex; /* capture start index */
+                          while (periodIndex + span < NUM_PERIODS) {
+                            const nextSlot = timetable[dayIndex][periodIndex + span];
+                            const nextSig = nextSlot.map(s => s.subjectId).sort().join('|');
+                            if (nextSig === sig && sig) {
+                              span++;
+                            } else break;
                           }
+                          cells.push(
+                            <td key={startIdx}
+                                colSpan={span}
+                                onClick={() => handleCellClick(dayIndex, startIdx)}
+                                onDragOver={handleDragOver}
+                                onDrop={(e) => handleDrop(dayIndex, startIdx, e)}
+                                className={`table-cell-interactive bg-blue-50/50`}
+                            >
+                              <div className="space-y-1">
+                                {slot.map((sub, idx) => (
+                                  <div key={idx} className="border-b last:border-none pb-1 mb-1 last:pb-0 last:mb-0 relative group">
+                                    <button onClick={(e) => { e.stopPropagation(); removeEntry(dayIndex, startIdx, idx); }} className="absolute top-0 right-0 p-0.5 rounded hover:bg-red-100 hidden group-hover:block" title="Remove">
+                                      <MdClose className="text-red-600 text-xs" />
+                                    </button>
+                                    <div className="font-medium text-gray-800">{sub.courseName}</div>
+                                    <div className="text-sm text-[#4169E1]">{sub.courseCode}</div>
+                                    <div className="text-xs text-gray-500">
+                                      {[sub.facultyId, sub.additionalFacultyId].filter(Boolean).map(id => faculty.find(f => f._id === id)?.name).filter(Boolean).join(', ')} - Sec {sub.year}{sub.section}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </td>
+                          );
+                          periodIndex += span;
+                        } else {
+                          const emptyIdx = periodIndex; // capture before increment
+                          cells.push(
+                            <td key={emptyIdx}
+                                onClick={() => handleCellClick(dayIndex, emptyIdx)}
+                                onDragOver={handleDragOver}
+                                onDrop={(e) => handleDrop(dayIndex, emptyIdx, e)}
+                                className={`table-cell-interactive ${isUnavailable ? 'bg-red-50/60 cursor-not-allowed' : 'bg-white'}`}
+                            >
+                              {isUnavailable && (
+                                <div className="space-y-1 opacity-70 text-red-700">
+                                  <div className="font-medium">{unavailable[dayIndex][emptyIdx]?.courseName}</div>
+                                  <div className="text-sm">{unavailable[dayIndex][emptyIdx]?.courseCode}</div>
+                                  <div className="text-xs">Year {unavailable[dayIndex][emptyIdx]?.year} – Sec {unavailable[dayIndex][emptyIdx]?.section}</div>
+                                </div>
+                              )}
+                            </td>
+                          );
+                          periodIndex++;
                         }
-                        return cells;
-                     })()}
+                      }
+                      return cells;
+                    })()}
                   </tr>
                 ))}
               </tbody>
