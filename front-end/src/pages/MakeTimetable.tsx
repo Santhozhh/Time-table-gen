@@ -71,6 +71,25 @@ const MakeTimetable: React.FC = () => {
   const [editFacultyId, setEditFacultyId] = useState<string>('');
   const [editAdditionalId, setEditAdditionalId] = useState<string>('');
 
+  // Find other allocations of a faculty in current timetable (excluding current editing cell)
+  const findAllocations = (facId:string)=>{
+    if(!facId) return [] as {day:number;period:number}[];
+    const result: {day:number;period:number}[] = [];
+    timetable.forEach((dayRow,d)=>{
+      dayRow.forEach((slot,p)=>{
+        const entries = Array.isArray(slot)? slot : [slot as any];
+        entries.forEach(ent=>{
+          if(ent && (ent.facultyId===facId || ent.additionalFacultyId===facId)){
+            if(!(editInfo && editInfo.day===d && editInfo.period===p)){
+              result.push({day:d, period:p});
+            }
+          }
+        });
+      });
+    });
+    return result;
+  };
+
   // compute unavailable slots for faculty
   const computeUnavailable = async (facultyId:string)=>{
     if(!facultyId) { setUnavailable(Array(6).fill(null).map(()=>Array(NUM_PERIODS).fill(null))); return; }
@@ -191,16 +210,20 @@ const MakeTimetable: React.FC = () => {
     const saved = sessionStorage.getItem(`${classKey}_draft`);
     if(saved){
       try{
-        const {forms: f, timetable: tt} = JSON.parse(saved);
-        if(Array.isArray(f)) setForms(f);
-        if(Array.isArray(tt)) setTimetable(tt);
+        const obj = JSON.parse(saved);
+        if(obj.ts && Date.now() - obj.ts < 60_000){
+          if(Array.isArray(obj.forms)) setForms(obj.forms);
+          if(Array.isArray(obj.timetable)) setTimetable(obj.timetable);
+        }else{
+          sessionStorage.removeItem(`${classKey}_draft`);
+        }
       }catch(e){/* ignore */}
     }
   },[]);
 
   // Save on change
   useEffect(()=>{
-    sessionStorage.setItem(`${classKey}_draft`, JSON.stringify({forms, timetable}));
+    sessionStorage.setItem(`${classKey}_draft`, JSON.stringify({ts: Date.now(), forms, timetable}));
   },[forms, timetable]);
 
   const handleCellClick = (dayIndex: number, periodIndex: number) => {
@@ -579,7 +602,7 @@ const MakeTimetable: React.FC = () => {
             <table className="w-full border-collapse">
               <thead>
                 <tr>
-                  <th className="table-header align-middle">Day / Period</th>
+                  <th className="table-header align-middle">Period <br/>/<br/>Day Order</th>
                   {Array(NUM_PERIODS).fill(null).map((_,i)=>(
                     <th key={i} className="table-header">Period {i+1}</th>
                   ))}
@@ -587,7 +610,7 @@ const MakeTimetable: React.FC = () => {
                 {/* Optional second header row removed for simplicity when periods are dynamic */}
               </thead>
               <tbody>
-                {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map((day, dayIndex) => (
+                {['I', 'II', 'III', 'IV', 'V', 'VI'].map((day, dayIndex) => (
                   <tr key={day}>
                     <td className="table-header">{day}</td>
                     {/* Render cells with merging (practicals) */}
@@ -761,6 +784,11 @@ const MakeTimetable: React.FC = () => {
                   classNamePrefix="react-select"
                 />
               </div>
+              {(() => {
+                const conf = findAllocations(editFacultyId);
+                if(!conf.length) return null;
+                return (<p className="text-red-600 text-xs mt-1">Allocated in: {conf.map(c=>`Day ${c.day+1} P${c.period+1}`).join(', ')}</p>);
+              })()}
               <div>
                 <label className="block text-sm font-medium mb-1">Additional Faculty</label>
                 <Select
@@ -771,21 +799,34 @@ const MakeTimetable: React.FC = () => {
                   classNamePrefix="react-select"
                 />
               </div>
+              {(() => {
+                const conf2 = findAllocations(editAdditionalId);
+                if(!conf2.length) return null;
+                return (<p className="text-red-600 text-xs mt-1">Allocated in: {conf2.map(c=>`Day ${c.day+1} P${c.period+1}`).join(', ')}</p>);
+              })()}
             </div>
-            <div className="flex justify-end gap-3 pt-4">
-              <button onClick={()=> setEditInfo(null)} className="btn-secondary">Cancel</button>
-              <button onClick={()=>{
-                if(!editInfo) return;
-                const {day,period,entry} = editInfo;
-                setTimetable(prev=> prev.map((d,dIdx)=> d.map((slot,pIdx)=>{
-                  if(dIdx===day && pIdx===period){
-                    return slot.map((s,idx)=> idx===entry ? {...s, facultyId: editFacultyId, additionalFacultyId: editAdditionalId}: s);
-                  }
-                  return slot;
-                })));
-                setEditInfo(null);
-              }} className="btn-primary">Save</button>
-            </div>
+            {(() => {
+              const primaryConf = findAllocations(editFacultyId);
+              const addConf = findAllocations(editAdditionalId);
+              const hasConf = (editFacultyId && primaryConf.length) || (editAdditionalId && addConf.length);
+              return (
+              <div className="flex justify-end gap-3 pt-4">
+                <button onClick={()=> setEditInfo(null)} className="btn-secondary">Cancel</button>
+                <button disabled={hasConf} onClick={()=>{
+                  if(hasConf) return;
+                  if(!editInfo) return;
+                  const {day,period,entry} = editInfo;
+                  setTimetable(prev=> prev.map((d,dIdx)=> d.map((slot,pIdx)=>{
+                    if(dIdx===day && pIdx===period){
+                      return slot.map((s,idx)=> idx===entry ? {...s, facultyId: editFacultyId, additionalFacultyId: editAdditionalId}: s);
+                    }
+                    return slot;
+                  })));
+                  setEditInfo(null);
+                }} className={`btn-primary ${hasConf?'opacity-50 cursor-not-allowed':''}`}>Save</button>
+              </div>
+              );
+            })()}
           </div>
         </div>
       )}

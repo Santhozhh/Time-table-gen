@@ -263,13 +263,16 @@ const ViewStudentTimetables: React.FC = () => {
                           for(let p=0; p<NUM_PERIODS;){
                             const cell = matrix[dIdx][p];
                             if(cell){
-                              // determine how many consecutive periods contain the same course (for practicals)
+                              const practicalTypes = ['practical','theory_practical'];
+                              const isMergeable = practicalTypes.includes(cell.type);
                               let span = 1;
-                              while(p+span < NUM_PERIODS){
-                                const next = matrix[dIdx][p+span];
-                                if(next && next.courseCode===cell.courseCode && next.section===cell.section && next.year===cell.year){
-                                  span++;
-                                }else break;
+                              if(isMergeable){
+                                while(p+span < NUM_PERIODS){
+                                  const next = matrix[dIdx][p+span];
+                                  if(next && practicalTypes.includes(next.type) && next.courseCode===cell.courseCode && next.section===cell.section && next.year===cell.year){
+                                    span++;
+                                  }else break;
+                                }
                               }
                               cells.push(
                                 <td key={p} colSpan={span} className="table-cell animate-pop" style={{animationDelay:`${p*40}ms`}}>

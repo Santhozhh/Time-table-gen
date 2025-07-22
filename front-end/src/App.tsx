@@ -99,7 +99,7 @@ function App() {
             <div className="px-6 py-4 rounded-xl bg-blue-50">
               <p className="text-sm text-gray-600">
                 Made with  by<br/>
-                <span className="font-semibold text-[#4169E1]">VCET Student</span>
+                <span className="font-semibold text-[#4169E1]">Santhosh Kumar K S D <br/>(IV yr CSE-C)</span>
               </p>
             </div>
           </div>) }

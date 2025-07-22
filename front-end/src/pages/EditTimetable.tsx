@@ -59,6 +59,25 @@ const EditTimetable: React.FC = () => {
   const [editFacultyId, setEditFacultyId] = useState<string>('');
   const [editAdditionalId, setEditAdditionalId] = useState<string>('');
 
+  // helper to find existing allocations of a faculty in current timetable
+  const findAllocations = (facId:string)=>{
+    if(!facId) return [] as {day:number;period:number}[];
+    const list: {day:number;period:number}[] = [];
+    timetable.forEach((dayRow, d)=>{
+      dayRow.forEach((slot,p)=>{
+        const entries = Array.isArray(slot)? slot : [slot as any];
+        entries.forEach(ent=>{
+          if(ent && (ent.facultyId===facId || ent.additionalFacultyId===facId)){
+            if(!(editInfo && editInfo.day===d && editInfo.period===p)){
+              list.push({day:d, period:p});
+            }
+          }
+        });
+      });
+    });
+    return list;
+  };
+
   // Fetch faculty and timetable data
   useEffect(() => {
     const fetchAll = async () => {
@@ -332,7 +351,7 @@ const EditTimetable: React.FC = () => {
                 </div>
                 <div className="form-group">
                   <label className="form-label">Hours per Week</label>
-                  <input type="number" name="hoursPerWeek" min="1" max={freePeriods} value={form.hoursPerWeek} onChange={(e)=>handleInputChange(idx,e)} className="input-field" />
+                  <input type="number" name="hoursPerWeek" min="1"  value={form.hoursPerWeek} onChange={(e)=>handleInputChange(idx,e)} className="input-field" />
                   <p className="text-xs text-gray-500 mt-1">Free periods available: {freePeriods}</p>
                 </div>
                 <div className="form-group">
@@ -386,6 +405,7 @@ const EditTimetable: React.FC = () => {
                           const sig = slot.map(s=>s.subjectId).sort().join('|');
                           const practicalTypes=['practical','theory_practical'];
                           const isMergeable = practicalTypes.includes(slot[0].type);
+                          const startIdx = periodIdx; // capture starting column index
                           let span = 1;
                           if(isMergeable){
                             while(periodIdx+span < NUM_PERIODS){
@@ -396,10 +416,10 @@ const EditTimetable: React.FC = () => {
                             }
                           }
                           cells.push(
-                            <td key={periodIdx} colSpan={span} className="table-cell cursor-pointer" onClick={()=>handleCellClick(dIdx,periodIdx)} onDragOver={handleDragOver} onDrop={(e)=>handleDrop(dIdx,periodIdx,e)}>
+                            <td key={startIdx} colSpan={span} className="table-cell cursor-pointer" onClick={()=>handleCellClick(dIdx,startIdx)} onDragOver={handleDragOver} onDrop={(e)=>handleDrop(dIdx,startIdx,e)}>
                               {slot.map((s,idx)=>(
                                 <div key={idx} className="space-y-1 relative group">
-                                  <button onClick={(e)=>{e.stopPropagation(); removeEntry(dIdx,periodIdx,idx);}} className="absolute top-0 right-0 p-0.5 hidden group-hover:block hover:bg-red-100 rounded" title="Remove">
+                                  <button onClick={(e)=>{e.stopPropagation(); removeEntry(dIdx,startIdx,idx);}} className="absolute top-0 right-0 p-0.5 hidden group-hover:block hover:bg-red-100 rounded" title="Remove">
                                     <MdClose className="text-red-600 text-xs" />
                                   </button>
                                   <div className="font-medium text-gray-800 text-xs">{s.courseName}</div>
@@ -413,7 +433,7 @@ const EditTimetable: React.FC = () => {
                                     return (
                                       <div className="text-[9px] text-gray-500 flex items-center gap-1">
                                         {names}
-                                        <button onClick={(e)=>{e.stopPropagation(); setEditInfo({day:dIdx, period:periodIdx, entry:idx}); setEditFacultyId(s.facultyId||''); setEditAdditionalId(s.additionalFacultyId||'');}} className="text-blue-500 hover:text-blue-700" title="Edit faculty"><MdEdit/></button>
+                                        <button onClick={(e)=>{e.stopPropagation(); setEditInfo({day:dIdx, period:startIdx, entry:idx}); setEditFacultyId(s.facultyId||''); setEditAdditionalId(s.additionalFacultyId||'');}} className="text-blue-500 hover:text-blue-700 " title="Edit faculty"><MdEdit className='size-4'/></button>
                                       </div>
                                     );
                                   })()}
@@ -510,6 +530,11 @@ const EditTimetable: React.FC = () => {
                   isClearable
                   classNamePrefix="react-select"
                 />
+                {(() => {
+                  const conf = findAllocations(editFacultyId);
+                  if(!conf.length) return null;
+                  return (<p className="text-red-600 text-xs mt-1">Allocated in: {conf.map(c=>`Day ${c.day+1} P${c.period+1}`).join(', ')}</p>);
+                })()}
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Additional Faculty</label>
@@ -520,6 +545,11 @@ const EditTimetable: React.FC = () => {
                   isClearable
                   classNamePrefix="react-select"
                 />
+                {(() => {
+                  const conf2 = findAllocations(editAdditionalId);
+                  if(!conf2.length) return null;
+                  return (<p className="text-red-600 text-xs mt-1">Allocated in: {conf2.map(c=>`Day ${c.day+1} P${c.period+1}`).join(', ')}</p>);
+                })()}
               </div>
             </div>
             <div className="flex justify-end gap-3 pt-4">

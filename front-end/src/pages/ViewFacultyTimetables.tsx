@@ -192,12 +192,16 @@ const ViewFacultyTimetables: React.FC = () => {
                         for(let p=0; p<NUM_PERIODS;){
                           const slot = matrix[dIdx]?.[p] || null;
                           if(slot){
+                            const practicalTypes=['practical','theory_practical'];
+                            const isMergeable = practicalTypes.includes(slot.type);
                             let span = 1;
-                            while(p+span < NUM_PERIODS){
-                              const next = matrix[dIdx]?.[p+span] || null;
-                              if(next && next.courseCode===slot.courseCode && next.section===slot.section && next.year===slot.year){
-                                span++;
-                              }else break;
+                            if(isMergeable){
+                              while(p+span < NUM_PERIODS){
+                                const next = matrix[dIdx]?.[p+span] || null;
+                                if(next && practicalTypes.includes(next.type) && next.courseCode===slot.courseCode && next.section===slot.section && next.year===slot.year){
+                                  span++;
+                                }else break;
+                              }
                             }
                             cells.push(
                               <td key={p} colSpan={span} className="table-cell animate-pop" style={{animationDelay:`${p*40}ms`}}>
