@@ -99,7 +99,7 @@ function App() {
             <div className="px-6 py-4 rounded-xl bg-blue-50">
               <p className="text-sm text-gray-600">
                 Made with  by<br/>
-                <span className="font-semibold text-[#4169E1]">VCET Students</span>
+                <span className="font-semibold text-[#4169E1]">VCET Student</span>
               </p>
             </div>
           </div>) }
@@ -112,7 +112,7 @@ function App() {
               title="Email Developer"
             >
               <MdEmail />
-          <h1> {!collapsed && <span className="text-xs font-medium text-gray-700">Contact Developer</span>}</h1>
+          <h1> {!collapsed && <span className="text-xs font-medium text-gray-700">Contact </span>}</h1>
             </a>
             <button
               className="p-3 text-2xl rounded-full hover:bg-gray-100 transition-colors focus:outline-none"

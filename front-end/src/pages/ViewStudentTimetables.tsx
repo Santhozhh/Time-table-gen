@@ -231,7 +231,7 @@ const ViewStudentTimetables: React.FC = () => {
                     <button onClick={downloadExcel} className="btn-primary flex items-center gap-2">
                       <MdDownload /> Download Excel
                     </button>
-                    <button onClick={deleteTimetable} className="btn-danger flex items-center gap-2">
+                    <button onClick={deleteTimetable} className="btn-danger flex items-center gap-2 bg-red-500 hover:bg-red-6ne00 text-white  ">
                       <MdDelete /> Delete
                     </button>
                     {selectedTimetable && (

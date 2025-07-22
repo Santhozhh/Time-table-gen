@@ -16,8 +16,13 @@ const SPECIALIZATIONS = [
   'EEE',
   'CIVIL',
   'MECH',
+  'CHEMICAL',
+  'BIO',  
+  'COMPUTER SCIENCE (CYBER SECURITY)',
   'PLACEMENTS',
   'SOFTSKILLS',
+  'PROJECT WORK',
+  'PHYSICS',
 ];
 
 const GRADES = [
