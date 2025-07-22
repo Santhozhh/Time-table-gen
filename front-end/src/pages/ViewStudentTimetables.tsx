@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 // Animation handled via CSS class .animate-slide-up
 import { generatedTimetableApi, facultyApi } from '../services/api';
-import {  MdDownload, MdEdit, MdChevronLeft, MdChevronRight, MdGroup } from 'react-icons/md';
+import {  MdDownload, MdEdit, MdDelete, MdChevronLeft, MdChevronRight, MdGroup } from 'react-icons/md';
 import { useNavigate } from 'react-router-dom';
 import { usePeriods } from '../context/PeriodsContext';
 
@@ -150,6 +150,22 @@ const ViewStudentTimetables: React.FC = () => {
     }
   };
 
+  /* ---------------- Delete timetable ---------------- */
+  const deleteTimetable = async () => {
+    if (!selectedTimetable) return;
+    const ok = window.confirm('Are you sure you want to delete this timetable? This action cannot be undone.');
+    if (!ok) return;
+    try {
+      await generatedTimetableApi.delete(selectedTimetable._id);
+      // Remove from local state
+      setTimetables(prev => prev.filter(tt => tt._id !== selectedTimetable._id));
+      alert('Timetable deleted successfully');
+    } catch (err) {
+      console.error('Delete failed', err);
+      alert('Failed to delete timetable');
+    }
+  };
+
   const getCellContent = (day: number, period: number) => {
     const cell = matrix[day][period];
     if (!cell) return null;
@@ -214,6 +230,9 @@ const ViewStudentTimetables: React.FC = () => {
                   <div className="flex gap-3">
                     <button onClick={downloadExcel} className="btn-primary flex items-center gap-2">
                       <MdDownload /> Download Excel
+                    </button>
+                    <button onClick={deleteTimetable} className="btn-danger flex items-center gap-2">
+                      <MdDelete /> Delete
                     </button>
                     {selectedTimetable && (
                       <button

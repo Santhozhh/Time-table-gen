@@ -34,6 +34,7 @@ export const generatedTimetableApi = {
   getById: (id: string) => api.get(`/generated-timetables/${id}`),
   create: (data: any) => api.post('/generated-timetables', data),
   update: (id: string, data: any) => api.put(`/generated-timetables/${id}`, data),
+  delete: (id: string) => api.delete(`/generated-timetables/${id}`),
 };
 
 export default api; 

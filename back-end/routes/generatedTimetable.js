@@ -7,5 +7,6 @@ router.get('/:id', generatedTimetableController.getGeneratedTimetableById);
 router.post('/', generatedTimetableController.createGeneratedTimetable);
 router.put('/:id', generatedTimetableController.updateGeneratedTimetable);
 router.get('/:id/excel', generatedTimetableController.exportExcel);
+router.delete('/:id', generatedTimetableController.deleteGeneratedTimetable);
 
 module.exports = router; 
