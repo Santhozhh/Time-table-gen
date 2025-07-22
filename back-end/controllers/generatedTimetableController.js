@@ -194,7 +194,7 @@ exports.exportExcel = async (req, res) => {
     console.error(err);
     res.status(500).json({ message:'Failed to export Excel'});
   }
-};
+}; 
 
 // Delete a generated timetable
 exports.deleteGeneratedTimetable = async (req, res) => {

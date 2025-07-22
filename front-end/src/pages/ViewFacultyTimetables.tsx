@@ -36,8 +36,7 @@ const ViewFacultyTimetables: React.FC = () => {
   const { numPeriods: NUM_PERIODS } = usePeriods();
   const [matrix, setMatrix] = useState<(TimetableCell | null)[][]>(Array(6).fill(null).map(() => Array(NUM_PERIODS).fill(null)));
   const [allTimetables, setAllTimetables] = useState<GeneratedTimetable[]>([]);
-  // removed allocatedCount state; compute on render
-  const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(true);
   const [listCollapsed, setListCollapsed] = useState(false);
   const [allocatedCount,setAllocatedCount]=useState(0);
 
@@ -132,10 +131,12 @@ const ViewFacultyTimetables: React.FC = () => {
                       <div className="flex-1">
                 <p className="font-medium text-gray-800">{f.name}</p>
                         <p className="text-xs text-gray-500">{f.grade}</p>
+                        <p className="text-xs text-gray-500">{f.specialization}</p>
+                        
                       </div>
                       <div className="flex flex-col items-end text-xs font-medium gap-1">
-                        <span className="text-indigo-700">A: {allocated}</span>
-                        <span className="text-green-700">F: {free}</span>
+                        <span className="text-indigo-700">Allocated Period: {allocated}</span>
+                        <span className="text-green-700">Free Period: {free}</span>
                       </div>
                     </button>
                   );
@@ -155,10 +156,14 @@ const ViewFacultyTimetables: React.FC = () => {
         <div className="md:col-span-2">
           {loading && <p>Loading...</p>}
           {!loading && selectedFaculty && (
-            <div className="space-y-4">
+            <div className="space-y-4 hover:shadow-lg transition-shadow duration-200 p-6 bg-white rounded-lg border border-gray-100">
               <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-4">
                 
-                Timetable for {selectedFaculty.name}
+                Timetable for {selectedFaculty.name}<br/>
+                Grade : {selectedFaculty.grade}<br/>
+                
+                 Department {  selectedFaculty.specialization}
+
                 <span className="text-sm font-medium text-indigo-700 bg-indigo-50 px-3 py-1 rounded-full">Allocated: {allocatedCount}</span>
                 {(() => {
                   let lim = typeof selectedFaculty.maxHoursPerWeek === 'number'

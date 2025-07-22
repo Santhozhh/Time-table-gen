@@ -1,12 +1,14 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
+import { usePersistedState } from '../hooks/usePersistedState';
+import { useState } from 'react';
 import { MdSchedule } from 'react-icons/md';
 import api from '../services/api';
 import { usePeriods } from '../context/PeriodsContext';
 import { useToast } from '../components/ToastProvider';
 
 const EditPeriods: React.FC = () => {
-  const [numPeriods, setNumPeriods] = useState<number>(7);
-  const [times, setTimes] = useState<string[]>([]);
+  const [numPeriods, setNumPeriods] = usePersistedState<number>('editPeriods_num', 7);
+  const [times, setTimes] = usePersistedState<string[]>('editPeriods_times', []);
   const [loading, setLoading] = useState<boolean>(true);
   const { showToast } = useToast();
   const { setNumPeriods: updateNumPeriods, setPeriodTimes: updateTimesCtx } = usePeriods();
@@ -45,6 +47,9 @@ const EditPeriods: React.FC = () => {
       updateTimesCtx(times);
       showToast(res.data?.message || 'Updated!', 'success');
       setTimeout(()=>window.location.reload(),600);
+      // Clear localStorage after successful save
+      localStorage.removeItem('editPeriods_num');
+      localStorage.removeItem('editPeriods_times');
     } catch (err: any) {
       console.error(err);
       showToast(err.response?.data?.message || 'Failed to update', 'error');

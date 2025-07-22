@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { MdPerson, MdDelete, MdEdit, MdAdd } from 'react-icons/md';
 import { useToast } from '../components/ToastProvider';
+import { usePersistedState } from '../hooks/usePersistedState';
 
 interface Faculty {
   _id: string;
@@ -36,12 +37,12 @@ const GRADES = [
 
 const FacultyEdit: React.FC = () => {
   const [faculty, setFaculty] = useState<Faculty[]>([]);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = usePersistedState<{name:string;grade:string;specialization:string}>('facultyEdit_form', {
     name: '',
     grade: 'Assistant Professor I',
     specialization: 'CSE',
   });
-  const [editingId,setEditingId]=useState<string|null>(null);
+  const [editingId,setEditingId]=usePersistedState<string|null>('facultyEdit_editing', null);
   const { showToast } = useToast();
 
   useEffect(() => {
@@ -74,6 +75,9 @@ const FacultyEdit: React.FC = () => {
       }
       setFormData({name:'',grade:'Assistant Professor I',specialization:'CSE'});
       setEditingId(null);
+      // clear localStorage keys as well
+      localStorage.removeItem('facultyEdit_form');
+      localStorage.removeItem('facultyEdit_editing');
       fetchFaculty();
       showToast(editingId?'Faculty updated!':'Faculty added successfully!', 'success');
     }catch(err){

@@ -16,7 +16,7 @@ const periodSchema = new mongoose.Schema({
   },
   type: {
     type: String,
-    enum: ['theory', 'practical', 'theory_practical', 'one_credit', 'honors', 'other'],
+    enum: ['theory', 'practical', 'theory_practical', 'one_credit', 'honors', 'other','placement/','project work'],
     required: true
   }
 });

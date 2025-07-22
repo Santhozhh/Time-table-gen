@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { MdAdd, MdSchedule, MdSchool,  MdPlayArrow, MdSave, MdDelete, MdClose } from 'react-icons/md';
+import { MdAdd, MdSchedule, MdSchool,  MdPlayArrow, MdSave, MdDelete, MdClose, MdEdit, MdChevronLeft } from 'react-icons/md';
 import { generatedTimetableApi } from '../services/api';
 import { usePeriods } from '../context/PeriodsContext';
 import Select from 'react-select';
+import { usePersistedState } from '../hooks/usePersistedState';
 
 interface TimetableForm {
   courseName: string;
   courseCode: string;
-  type: 'theory' | 'practical' | 'theory_practical' | 'one_credit' | 'honors' | 'other';
+  type: 'theory' | 'practical' | 'theory_practical' | 'one_credit' | 'honors' | 'other' | 'placement' | 'project Work';
   hoursPerWeek: number;
   facultyId: string;
   additionalFacultyId?: string;
@@ -31,7 +32,7 @@ interface TimetableCell {
   courseCode: string;
   facultyId: string;
   additionalFacultyId?: string;
-  type: 'theory' | 'practical' | 'theory_practical' | 'one_credit' | 'honors' | 'other';
+  type: 'theory' | 'practical' | 'theory_practical' | 'one_credit' | 'honors' | 'other'| 'placement' | 'project Work';
   section: string;
   year?: number; // optional for backward compatibility
   subjectId: string; // link back to form
@@ -44,8 +45,9 @@ const MakeTimetable: React.FC = () => {
   const defaultYear=parseInt(searchParams.get('year')||'1',10);
   const defaultSection=(searchParams.get('section')||'A').toUpperCase();
 
+  const classKey = `makeTT_${defaultYear}${defaultSection}`;
   const genId = () => Math.random().toString(36).slice(2,10);
-  const [forms, setForms] = useState<TimetableForm[]>([{
+  const [forms, setForms] = usePersistedState<TimetableForm[]>(`${classKey}_forms`, [{
     courseName: '',
     courseCode: '',
     type: 'theory',
@@ -60,10 +62,14 @@ const MakeTimetable: React.FC = () => {
   const [faculty, setFaculty] = useState<Faculty[]>([]);
   const { numPeriods: NUM_PERIODS } = usePeriods();
   const emptyMatrix = () => Array(6).fill(null).map(() => Array(NUM_PERIODS).fill(null).map(()=>[] as TimetableSlot));
-  const [timetable, setTimetable] = useState<TimetableSlot[][]>(emptyMatrix());
-  const [showTimetable, setShowTimetable] = useState(false);
+  const [timetable, setTimetable] = usePersistedState<TimetableSlot[][]>(`${classKey}_matrix`, emptyMatrix());
+  const [showTimetable, setShowTimetable] = usePersistedState<boolean>(`${classKey}_show`, false);
   const [currentFormIndex, setCurrentFormIndex] = useState(0);
   const [unavailable, setUnavailable] = useState<(TimetableCell | null)[][]>(Array(6).fill(null).map(()=>Array(NUM_PERIODS).fill(null)));
+  // State for editing a single cell's faculty
+  const [editInfo, setEditInfo] = useState<{day:number; period:number; entry:number}|null>(null);
+  const [editFacultyId, setEditFacultyId] = useState<string>('');
+  const [editAdditionalId, setEditAdditionalId] = useState<string>('');
 
   // compute unavailable slots for faculty
   const computeUnavailable = async (facultyId:string)=>{
@@ -182,7 +188,7 @@ const MakeTimetable: React.FC = () => {
   /* -------- Persist state to sessionStorage -------- */
   // Load saved draft on mount
   useEffect(()=>{
-    const saved = sessionStorage.getItem('makeTT_draft');
+    const saved = sessionStorage.getItem(`${classKey}_draft`);
     if(saved){
       try{
         const {forms: f, timetable: tt} = JSON.parse(saved);
@@ -194,7 +200,7 @@ const MakeTimetable: React.FC = () => {
 
   // Save on change
   useEffect(()=>{
-    sessionStorage.setItem('makeTT_draft', JSON.stringify({forms, timetable}));
+    sessionStorage.setItem(`${classKey}_draft`, JSON.stringify({forms, timetable}));
   },[forms, timetable]);
 
   const handleCellClick = (dayIndex: number, periodIndex: number) => {
@@ -305,6 +311,10 @@ const MakeTimetable: React.FC = () => {
 
       if (status === 201 || status === 200) {
         alert('Timetable generated and saved successfully!');
+        // Clear persisted state after successful save
+        localStorage.removeItem(`${classKey}_forms`);
+        localStorage.removeItem(`${classKey}_matrix`);
+        localStorage.removeItem(`${classKey}_show`);
         navigate('/view-student-timetables');
       } else if (status === 409) {
         alert(data.message || 'Faculty conflict detected!');
@@ -364,6 +374,9 @@ const MakeTimetable: React.FC = () => {
         <div className="card">
           <div className="card-gradient-header">
             <div className="flex items-center gap-4">
+              <button onClick={()=>navigate('/')} className="p-1 rounded hover:bg-white/20" title="Back to Home">
+                <MdChevronLeft className="text-3xl text-white" />
+              </button>
               <div className="icon-container">
                 <MdSchedule className="text-3xl text-white" />
               </div>
@@ -431,6 +444,8 @@ const MakeTimetable: React.FC = () => {
                       <option value="practical">Practical</option>
                       <option value="one_credit">One Credit Course</option>
                       <option value="honors">Honors</option>
+                      <option value="placement">Placement</option>
+                      <option value="project Work">Project Work</option>
                       <option value="other">Other</option>
                     </select>
                   </div>
@@ -540,10 +555,15 @@ const MakeTimetable: React.FC = () => {
           <div className="card-gradient-header">
             <div className="flex justify-between items-center">
               <div className="flex items-center gap-4">
-                <div className="icon-container">
-                  <MdSchedule className="text-3xl text-white" />
+                <button onClick={()=>setShowTimetable(false)} className="p-1 rounded hover:bg-white/20" title="Back to Form">
+                  <MdChevronLeft className="text-2xl text-white" />
+                </button>
+                <div className="flex items-center gap-4">
+                  <div className="icon-container">
+                    <MdSchedule className="text-3xl text-white" />
+                  </div>
+                  <h2 className="text-2xl font-bold text-white">Create Timetable</h2>
                 </div>
-                <h2 className="text-2xl font-bold text-white">Create Timetable</h2>
               </div>
               <button
                 onClick={handleGenerate}
@@ -579,16 +599,21 @@ const MakeTimetable: React.FC = () => {
                         const isUnavailable = unavailable[dayIndex][periodIndex];
 
                         if (slot.length) {
+                          const practicalTypes = ['practical','theory_practical'];
+                          const isMergeable = slot.every(s=> practicalTypes.includes(s.type));
                           // create signature using subjectIds (assuming same subject repeated)
                           const sig = slot.map(s => s.subjectId).sort().join('|');
                           let span = 1;
                           const startIdx = periodIndex; /* capture start index */
-                          while (periodIndex + span < NUM_PERIODS) {
-                            const nextSlot = timetable[dayIndex][periodIndex + span];
-                            const nextSig = nextSlot.map(s => s.subjectId).sort().join('|');
-                            if (nextSig === sig && sig) {
-                              span++;
-                            } else break;
+                          if(isMergeable){
+                            while (periodIndex + span < NUM_PERIODS) {
+                              const nextSlot = timetable[dayIndex][periodIndex + span];
+                              const nextSig = nextSlot.map(s => s.subjectId).sort().join('|');
+                              const nextMergeable = nextSlot.every(s=> practicalTypes.includes(s.type));
+                              if (nextMergeable && nextSig === sig && sig) {
+                                span++;
+                              } else break;
+                            }
                           }
                           cells.push(
                             <td key={startIdx}
@@ -606,8 +631,9 @@ const MakeTimetable: React.FC = () => {
                                     </button>
                                     <div className="font-medium text-gray-800">{sub.courseName}</div>
                                     <div className="text-sm text-[#4169E1]">{sub.courseCode}</div>
-                                    <div className="text-xs text-gray-500">
+                                    <div className="text-xs text-gray-500 flex items-center gap-1">
                                       {[sub.facultyId, sub.additionalFacultyId].filter(Boolean).map(id => faculty.find(f => f._id === id)?.name).filter(Boolean).join(', ')} - Sec {sub.year}{sub.section}
+                                      <button onClick={(e)=>{e.stopPropagation(); setEditInfo({day:dayIndex, period:startIdx, entry:idx}); setEditFacultyId(sub.facultyId||''); setEditAdditionalId(sub.additionalFacultyId||'');}} title="Edit faculty" className="text-blue-500 hover:text-blue-700"><MdEdit/></button>
                                     </div>
                                   </div>
                                 ))}
@@ -674,6 +700,22 @@ const MakeTimetable: React.FC = () => {
                     </ul>
                     </div>
                 )}
+                 {forms.some(f=>f.type==='placement') && (
+                  <div>
+                    <h4 className='font-semibold text-gray-700 mb-2'>placement</h4>
+                    <ul className='space-y-3'>
+                      {forms.map((subj,idx)=>subj.type==='placement' ? renderSubjectItem(subj,idx):null)}
+                    </ul>
+                    </div>
+                )}
+                 {forms.some(f=>f.type==='project Work') && (
+                  <div>
+                    <h4 className='font-semibold text-gray-700 mb-2'>project work</h4>
+                    <ul className='space-y-3'>
+                      {forms.map((subj,idx)=>subj.type==='project Work' ? renderSubjectItem(subj,idx):null)}
+                    </ul>
+                    </div>
+                )}
                 {forms.some(f=>f.type==='other') && (
                   <div>
                     <h4 className='font-semibold text-gray-700 mb-2'>others</h4>
@@ -699,6 +741,50 @@ const MakeTimetable: React.FC = () => {
                   </div>
               )}
 
+            </div>
+          </div>
+        </div>
+      )}
+      {/* ------------- Edit Faculty Modal ------------- */}
+      {editInfo && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-sm space-y-4">
+            <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2"><MdEdit/> Update Faculty</h3>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium mb-1">Faculty</label>
+                <Select
+                  options={faculty.map(f=>({value:f._id,label:`${f.name}${f.grade?` (${f.grade})`:''}`}))}
+                  value={faculty.find(f=>f._id===editFacultyId)? {value:editFacultyId,label:faculty.find(f=>f._id===editFacultyId)?.name}:null}
+                  onChange={opt=> setEditFacultyId(opt? opt.value:'' )}
+                  isClearable
+                  classNamePrefix="react-select"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Additional Faculty</label>
+                <Select
+                  options={faculty.map(f=>({value:f._id,label:`${f.name}${f.grade?` (${f.grade})`:''}`}))}
+                  value={faculty.find(f=>f._id===editAdditionalId)? {value:editAdditionalId,label:faculty.find(f=>f._id===editAdditionalId)?.name}:null}
+                  onChange={opt=> setEditAdditionalId(opt? opt.value:'' )}
+                  isClearable
+                  classNamePrefix="react-select"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 pt-4">
+              <button onClick={()=> setEditInfo(null)} className="btn-secondary">Cancel</button>
+              <button onClick={()=>{
+                if(!editInfo) return;
+                const {day,period,entry} = editInfo;
+                setTimetable(prev=> prev.map((d,dIdx)=> d.map((slot,pIdx)=>{
+                  if(dIdx===day && pIdx===period){
+                    return slot.map((s,idx)=> idx===entry ? {...s, facultyId: editFacultyId, additionalFacultyId: editAdditionalId}: s);
+                  }
+                  return slot;
+                })));
+                setEditInfo(null);
+              }} className="btn-primary">Save</button>
             </div>
           </div>
         </div>

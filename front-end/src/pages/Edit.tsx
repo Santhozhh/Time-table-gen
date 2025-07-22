@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { usePersistedState } from '../hooks/usePersistedState';
 import { facultyApi } from '../services/api';
 import './Edit.css';
 
@@ -20,7 +21,7 @@ interface NewFaculty {
 
 const Edit: React.FC = () => {
   const [faculty, setFaculty] = useState<Faculty[]>([]);
-  const [newFaculty, setNewFaculty] = useState<NewFaculty>({
+  const [newFaculty, setNewFaculty] = usePersistedState<NewFaculty>('edit_newFaculty', {
     name: '',
     code: '',
     specialization: '',
@@ -56,12 +57,7 @@ const Edit: React.FC = () => {
     e.preventDefault();
     try {
       await facultyApi.create(newFaculty);
-      setNewFaculty({
-        name: '',
-        code: '',
-        specialization: '',
-        maxHoursPerWeek: 40
-      });
+      setNewFaculty({ name:'', code:'', specialization:'', maxHoursPerWeek:40 });
       loadFaculty();
     } catch (err) {
       setError('Failed to add faculty');

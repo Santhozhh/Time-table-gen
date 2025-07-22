@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { MdAdd, MdSchedule, MdSchool, MdSave, MdDelete,  MdClose } from 'react-icons/md';
+import { MdAdd, MdSchedule, MdSchool, MdSave, MdDelete,  MdClose, MdChevronLeft, MdEdit } from 'react-icons/md';
 import { MdClass } from 'react-icons/md';
 import { generatedTimetableApi } from '../services/api';
 import { usePeriods } from '../context/PeriodsContext';
+import { usePersistedState } from '../hooks/usePersistedState';
+import Select from 'react-select';
 
 interface TimetableForm {
   courseName: string;
   courseCode: string;
-  type: 'theory' | 'practical' | 'theory_practical' | 'one_credit' | 'honors' | 'other';
+  type: 'theory' | 'practical' | 'theory_practical' | 'one_credit' | 'honors' | 'other'|'placement' | 'project work';
   hoursPerWeek: number;
   facultyId: string;
   additionalFacultyId?: string;
@@ -29,7 +31,7 @@ interface TimetableCell {
   courseCode: string;
   facultyId: string;
   additionalFacultyId?: string;
-  type: 'theory' | 'practical' | 'theory_practical' | 'one_credit' | 'honors' | 'other';
+  type: 'theory' | 'practical' | 'theory_practical' | 'one_credit' | 'honors' | 'other' | 'placement' | 'project work';
   section: string;
   year?: number;
   subjectId: string;
@@ -41,16 +43,21 @@ const EditTimetable: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const [forms, setForms] = useState<TimetableForm[]>([]);
+  const keyPrefix = `editTT_${id || 'temp'}`;
+  const [forms, setForms] = usePersistedState<TimetableForm[]>(`${keyPrefix}_forms`, []);
   const [fixedYear,setFixedYear]=useState<number>(1);
   const [fixedSection,setFixedSection]=useState<string>('A');
   // index for timetable navigation (reuse if needed later)
   const { numPeriods: NUM_PERIODS } = usePeriods();
   const emptyMatrix = () => Array(6).fill(null).map(() => Array(NUM_PERIODS).fill(null).map(() => [] as TimetableSlot));
-  const [timetable, setTimetable] = useState<TimetableSlot[][]>(emptyMatrix());
+  const [timetable, setTimetable] = usePersistedState<TimetableSlot[][]>(`${keyPrefix}_matrix`, emptyMatrix());
   const [faculty, setFaculty] = useState<Faculty[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentFormIndex, setCurrentFormIndex] = useState(0);
+  // per-cell faculty editing
+  const [editInfo, setEditInfo] = useState<{day:number; period:number; entry:number}|null>(null);
+  const [editFacultyId, setEditFacultyId] = useState<string>('');
+  const [editAdditionalId, setEditAdditionalId] = useState<string>('');
 
   // Fetch faculty and timetable data
   useEffect(() => {
@@ -141,6 +148,9 @@ const EditTimetable: React.FC = () => {
       });
       if (status === 200) {
         alert('Timetable updated successfully');
+        // clear persisted
+        localStorage.removeItem(`${keyPrefix}_forms`);
+        localStorage.removeItem(`${keyPrefix}_matrix`);
         navigate('/view-student-timetables');
       } else {
         alert('Update failed');
@@ -274,6 +284,7 @@ const EditTimetable: React.FC = () => {
       <div className="card">
         <div className="card-gradient-header">
           <div className="flex items-center gap-4">
+            <button onClick={()=>navigate('/')} className="p-1 rounded hover:bg-white/20" title="Back to Home"><MdChevronLeft className="text-3xl text-white"/></button>
             <div className="icon-container">
               <MdSchedule className="text-3xl text-white" />
             </div>
@@ -313,7 +324,9 @@ const EditTimetable: React.FC = () => {
                     <option value="theory">Theory</option>
                     <option value="practical">Practical</option>
                     <option value="one_credit">One Credit</option>
-                    <option value="honors">Honors</option>
+                    <option value="project work">Project Work</option>
+                    <option value="placement">Placement</option>
+                    <option value="honors">Honors</option>  
                     <option value="other">Other</option>
                   </select>
                 </div>
@@ -371,24 +384,39 @@ const EditTimetable: React.FC = () => {
                         const slot = timetable[dIdx]?.[periodIdx] || [];
                         if(slot.length){
                           const sig = slot.map(s=>s.subjectId).sort().join('|');
+                          const practicalTypes=['practical','theory_practical'];
+                          const isMergeable = practicalTypes.includes(slot[0].type);
                           let span = 1;
-                          const startIdx = periodIdx; /* capture */
-                          while(periodIdx+span < NUM_PERIODS){
-                            const nextSlot = timetable[dIdx]?.[periodIdx+span] || [];
-                            const nextSig = nextSlot.map(s=>s.subjectId).sort().join('|');
-                            if(nextSig === sig && sig){
-                              span++;
-                            }else break;
+                          if(isMergeable){
+                            while(periodIdx+span < NUM_PERIODS){
+                              const next = timetable[dIdx]?.[periodIdx+span] || [];
+                              if(next && practicalTypes.includes(next[0].type) && next.map(s=>s.subjectId).sort().join('|') === sig){
+                                span++;
+                              }else break;
+                            }
                           }
                           cells.push(
-                            <td key={startIdx} colSpan={span} className="table-cell cursor-pointer" onClick={()=>handleCellClick(dIdx,startIdx)} onDragOver={handleDragOver} onDrop={(e)=>handleDrop(dIdx,startIdx,e)}>
+                            <td key={periodIdx} colSpan={span} className="table-cell cursor-pointer" onClick={()=>handleCellClick(dIdx,periodIdx)} onDragOver={handleDragOver} onDrop={(e)=>handleDrop(dIdx,periodIdx,e)}>
                               {slot.map((s,idx)=>(
                                 <div key={idx} className="space-y-1 relative group">
-                                  <button onClick={(e)=>{e.stopPropagation(); removeEntry(dIdx,startIdx,idx);}} className="absolute top-0 right-0 p-0.5 hidden group-hover:block hover:bg-red-100 rounded" title="Remove">
+                                  <button onClick={(e)=>{e.stopPropagation(); removeEntry(dIdx,periodIdx,idx);}} className="absolute top-0 right-0 p-0.5 hidden group-hover:block hover:bg-red-100 rounded" title="Remove">
                                     <MdClose className="text-red-600 text-xs" />
                                   </button>
                                   <div className="font-medium text-gray-800 text-xs">{s.courseName}</div>
                                   <div className="text-[10px] text-blue-600">{s.courseCode}</div>
+                                  {(() => {
+                                    const names = [s.facultyId, s.additionalFacultyId]
+                                      .filter(Boolean)
+                                      .map(id => faculty.find(f => f._id === id)?.name)
+                                      .filter(Boolean)
+                                      .join(', ');
+                                    return (
+                                      <div className="text-[9px] text-gray-500 flex items-center gap-1">
+                                        {names}
+                                        <button onClick={(e)=>{e.stopPropagation(); setEditInfo({day:dIdx, period:periodIdx, entry:idx}); setEditFacultyId(s.facultyId||''); setEditAdditionalId(s.additionalFacultyId||'');}} className="text-blue-500 hover:text-blue-700" title="Edit faculty"><MdEdit/></button>
+                                      </div>
+                                    );
+                                  })()}
                                 </div>
                               ))}
                             </td>
@@ -468,6 +496,49 @@ const EditTimetable: React.FC = () => {
           </button>
         </div>
       </div>
+      {editInfo && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-sm space-y-4">
+            <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2"><MdEdit/> Update Faculty</h3>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium mb-1">Faculty</label>
+                <Select
+                  options={faculty.map(f=>({value:f._id,label:`${f.name}${f.grade?` (${f.grade})`:''}`}))}
+                  value={faculty.find(f=>f._id===editFacultyId)? {value:editFacultyId,label:faculty.find(f=>f._id===editFacultyId)?.name}:null}
+                  onChange={opt=> setEditFacultyId(opt? opt.value:'' )}
+                  isClearable
+                  classNamePrefix="react-select"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Additional Faculty</label>
+                <Select
+                  options={faculty.map(f=>({value:f._id,label:`${f.name}${f.grade?` (${f.grade})`:''}`}))}
+                  value={faculty.find(f=>f._id===editAdditionalId)? {value:editAdditionalId,label:faculty.find(f=>f._id===editAdditionalId)?.name}:null}
+                  onChange={opt=> setEditAdditionalId(opt? opt.value:'' )}
+                  isClearable
+                  classNamePrefix="react-select"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 pt-4">
+              <button onClick={()=> setEditInfo(null)} className="btn-secondary">Cancel</button>
+              <button onClick={()=>{
+                if(!editInfo) return;
+                const {day,period,entry} = editInfo;
+                setTimetable(prev=> prev.map((dayRow,d)=> dayRow.map((slot,p)=>{
+                  if(d===day && p===period){
+                    return slot.map((s,idx)=> idx===entry ? {...s, facultyId: editFacultyId, additionalFacultyId: editAdditionalId}: s);
+                  }
+                  return slot;
+                })));
+                setEditInfo(null);
+              }} className="btn-primary">Save</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
