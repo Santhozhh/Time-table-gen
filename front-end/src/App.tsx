@@ -1,5 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
-import { MdSchedule, MdPerson, MdGroup, MdEdit, MdChevronLeft, MdChevronRight, MdEmail } from 'react-icons/md';
+import { MdSchedule, MdPerson, MdGroup, MdEdit, MdChevronLeft, MdChevronRight, MdEmail , MdComputer } from 'react-icons/md';
 import { FaGraduationCap } from 'react-icons/fa';
 import { ToastProvider } from './components/ToastProvider';
 import { PeriodsProvider } from './context/PeriodsContext';
@@ -10,6 +10,7 @@ import ViewFacultyTimetables from './pages/ViewFacultyTimetables';
 import FacultyEdit from './pages/FacultyEdit';
 import EditPeriods from './pages/EditPeriods';
 import EditTimetable from './pages/EditTimetable';
+import ViewLabTimetables from './pages/ViewLabTimetables';
 import React from 'react';
 
 const NavLink = ({ to, icon, text, collapsed }: { to: string; icon: React.ReactNode; text: string; collapsed: boolean }) => {
@@ -80,6 +81,13 @@ function App() {
             </li>
             <li>
               <NavLink 
+                to="/view-lab-timetables" 
+                icon={<MdComputer />} 
+                text="Lab Timetables" collapsed={collapsed}
+              />
+            </li>
+            <li>
+              <NavLink 
                 to="/faculty-edit" 
                 icon={<MdEdit />} 
                 text="Edit Faculty" collapsed={collapsed}
@@ -130,6 +138,7 @@ function App() {
               <Route path="/make-timetable" element={<MakeTimetable />} />
               <Route path="/view-student-timetables" element={<ViewStudentTimetables />} />
               <Route path="/view-faculty-timetables" element={<ViewFacultyTimetables />} />
+              <Route path="/view-lab-timetables" element={<ViewLabTimetables />} />
               <Route path="/faculty-edit" element={<FacultyEdit />} />
               <Route path="/edit-periods" element={<EditPeriods />} />
               <Route path="/edit-timetable/:id" element={<EditTimetable />} />

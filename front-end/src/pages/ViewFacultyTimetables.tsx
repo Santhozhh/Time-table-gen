@@ -17,11 +17,13 @@ interface Faculty {
 interface TimetableCell {
   courseName: string;
   courseCode: string;
+  shortForm?: string;
   section: string;
   facultyId: string;
   type: string;
   additionalFacultyId?: string;
   year?: number; // Added year field
+  labNumber?: number;
 }
 
 interface GeneratedTimetable {
@@ -206,7 +208,7 @@ const ViewFacultyTimetables: React.FC = () => {
                             cells.push(
                               <td key={p} colSpan={span} className="table-cell animate-pop" style={{animationDelay:`${p*40}ms`}}>
                               <div className="space-y-1">
-                                <div className="font-medium text-gray-800 text-xs">{slot.courseName}</div>
+                                <div className="font-medium text-gray-800 text-xs">{slot.shortForm || slot.courseName}</div>
                                   <div className="text-[10px] text-blue-600">Year :{slot.year}</div>
                                   <div className="text-[10px] text-blue-600">Sec : {slot.section}</div>
                               </div>

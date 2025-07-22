@@ -9,10 +9,12 @@ import { usePersistedState } from '../hooks/usePersistedState';
 interface TimetableForm {
   courseName: string;
   courseCode: string;
+  shortForm?: string; // NEW – short form / alias
   type: 'theory' | 'practical' | 'theory_practical' | 'one_credit' | 'honors' | 'other' | 'placement' | 'project Work';
   hoursPerWeek: number;
   facultyId: string;
   additionalFacultyId?: string;
+  labNumber?: number; // NEW – Lab 1/2/3 only for practical subjects
   section: string;
   year: number; // 1 – 4
   id: string; // unique identifier for tracking
@@ -30,9 +32,11 @@ interface Faculty {
 interface TimetableCell {
   courseName: string;
   courseCode: string;
+  shortForm?: string; // NEW
   facultyId: string;
   additionalFacultyId?: string;
   type: 'theory' | 'practical' | 'theory_practical' | 'one_credit' | 'honors' | 'other'| 'placement' | 'project Work';
+  labNumber?: number; // NEW
   section: string;
   year?: number; // optional for backward compatibility
   subjectId: string; // link back to form
@@ -50,10 +54,12 @@ const MakeTimetable: React.FC = () => {
   const [forms, setForms] = usePersistedState<TimetableForm[]>(`${classKey}_forms`, [{
     courseName: '',
     courseCode: '',
+    shortForm: '', // NEW
     type: 'theory',
     hoursPerWeek: 0,
     facultyId: '',
     additionalFacultyId: '',
+    labNumber: undefined,
     section: defaultSection as any,
     year: defaultYear,
     id: genId()
@@ -134,7 +140,7 @@ const MakeTimetable: React.FC = () => {
     const newForms = [...forms];
     let parsed: any = value;
     // Convert numeric fields to numbers to maintain consistent types
-    if (name === 'year' || name === 'hoursPerWeek') {
+    if (name === 'year' || name === 'hoursPerWeek' || name==='labNumber') {
       parsed = parseInt(value, 10) || 0;
     }
     const prevType = newForms[index].type;
@@ -181,10 +187,12 @@ const MakeTimetable: React.FC = () => {
     setForms([...forms, {
       courseName: '',
       courseCode: '',
+      shortForm: '', // NEW
       type: 'theory',
       hoursPerWeek: 0,
       facultyId: '',
       additionalFacultyId: '',
+      labNumber: undefined,
       section: base.section,
       year: base.year,
       id: genId()
@@ -254,9 +262,11 @@ const MakeTimetable: React.FC = () => {
     const newEntry: TimetableCell = {
       courseName: currentForm.courseName,
       courseCode: currentForm.courseCode,
+      shortForm: currentForm.shortForm,
       facultyId: currentForm.facultyId,
       additionalFacultyId: currentForm.additionalFacultyId,
       type: currentForm.type,
+      labNumber: currentForm.labNumber,
       section: currentForm.section,
       year: currentForm.year,
       subjectId: currentForm.id
@@ -455,6 +465,18 @@ const MakeTimetable: React.FC = () => {
                   </div>
 
                   <div className="form-group">
+                    <label className="form-label">Short Form</label>
+                    <input
+                      type="text"
+                      name="shortForm"
+                      value={form.shortForm || ''}
+                      onChange={(e)=>handleInputChange(index,e)}
+                      placeholder="e.g. DS"
+                      className="input-field"
+                    />
+                  </div>
+
+                  <div className="form-group">
                     <label className="form-label">Type</label>
                     <select
                       name="type"
@@ -487,6 +509,22 @@ const MakeTimetable: React.FC = () => {
                       className="input-field"
                     />
                   </div>
+
+                  {(form.type==='practical' || form.type==='theory_practical') && (
+                    <div className="form-group">
+                      <label className="form-label">Lab Number</label>
+                      <select
+                        name="labNumber"
+                        value={form.labNumber ?? ''}
+                        onChange={(e)=>handleInputChange(index,e)}
+                        className="input-field"
+                      >
+                        <option value="">Select Lab</option>
+                        {[1,2,3].map(n=>(<option key={n} value={n}>Lab {n}</option>))}
+                        <option value="other">Other</option>
+                      </select>
+                    </div>
+                  )}
 
                   <div className="form-group">
                     <label className="form-label">{form.type==='honors' ? 'Ordinary Faculty' : 'Faculty'}</label>
@@ -812,7 +850,7 @@ const MakeTimetable: React.FC = () => {
               return (
               <div className="flex justify-end gap-3 pt-4">
                 <button onClick={()=> setEditInfo(null)} className="btn-secondary">Cancel</button>
-                <button disabled={hasConf} onClick={()=>{
+                <button disabled={!!hasConf} onClick={()=>{
                   if(hasConf) return;
                   if(!editInfo) return;
                   const {day,period,entry} = editInfo;

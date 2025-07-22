@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { MdAdd, MdSchedule, MdSchool, MdSave, MdDelete,  MdClose, MdChevronLeft, MdEdit } from 'react-icons/md';
 import { MdClass } from 'react-icons/md';
 import { generatedTimetableApi } from '../services/api';
+// we'll reuse generatedTimetableApi to fetch other timetables for availability
 import { usePeriods } from '../context/PeriodsContext';
 import { usePersistedState } from '../hooks/usePersistedState';
 import Select from 'react-select';
@@ -10,10 +11,12 @@ import Select from 'react-select';
 interface TimetableForm {
   courseName: string;
   courseCode: string;
+  shortForm?: string; // NEW
   type: 'theory' | 'practical' | 'theory_practical' | 'one_credit' | 'honors' | 'other'|'placement' | 'project work';
   hoursPerWeek: number;
   facultyId: string;
   additionalFacultyId?: string;
+  labNumber?: number; // NEW
   section: string;
   year: number;
   id: string;
@@ -29,9 +32,11 @@ interface Faculty {
 interface TimetableCell {
   courseName: string;
   courseCode: string;
+  shortForm?: string; // NEW
   facultyId: string;
   additionalFacultyId?: string;
   type: 'theory' | 'practical' | 'theory_practical' | 'one_credit' | 'honors' | 'other' | 'placement' | 'project work';
+  labNumber?: number; // NEW
   section: string;
   year?: number;
   subjectId: string;
@@ -51,6 +56,8 @@ const EditTimetable: React.FC = () => {
   const { numPeriods: NUM_PERIODS } = usePeriods();
   const emptyMatrix = () => Array(6).fill(null).map(() => Array(NUM_PERIODS).fill(null).map(() => [] as TimetableSlot));
   const [timetable, setTimetable] = usePersistedState<TimetableSlot[][]>(`${keyPrefix}_matrix`, emptyMatrix());
+  // Track unavailable slots for currently selected faculty (across other timetables)
+  const [unavailable, setUnavailable] = useState<(TimetableCell|null)[][]>(Array(6).fill(null).map(()=>Array(NUM_PERIODS).fill(null)));
   const [faculty, setFaculty] = useState<Faculty[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentFormIndex, setCurrentFormIndex] = useState(0);
@@ -78,6 +85,38 @@ const EditTimetable: React.FC = () => {
     return list;
   };
 
+  // helper to compute unavailable slots for a faculty across all generated timetables (excluding this one)
+  const computeUnavailable = async (facultyId:string)=>{
+    if(!facultyId){
+      setUnavailable(Array(6).fill(null).map(()=>Array(NUM_PERIODS).fill(null)));
+      return;
+    }
+    try{
+      const { data } = await generatedTimetableApi.getAll();
+      const matrix:(TimetableCell|null)[][] = Array(6).fill(null).map(()=>Array(NUM_PERIODS).fill(null));
+      data.forEach((tt:any)=>{
+        if(String(tt._id)===String(id)) return; // skip current timetable
+        tt.timetable.forEach((dayRow:any,dIdx:number)=>{
+          dayRow.forEach((cell:any,pIdx:number)=>{
+            const entries:Array<any> = Array.isArray(cell)? cell : cell? [cell]: [];
+            const found = entries.find((c:any)=> c.facultyId===facultyId || c.additionalFacultyId===facultyId);
+            if(found){
+              matrix[dIdx][pIdx] = found as TimetableCell;
+            }
+          });
+        });
+      });
+      setUnavailable(matrix);
+    }catch(err){ console.error('computeUnavailable err',err); }
+  };
+
+  // recompute when currentFormIndex changes
+  useEffect(()=>{
+    const facId = forms[currentFormIndex]?.facultyId;
+    computeUnavailable(facId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[currentFormIndex]);
+
   // Fetch faculty and timetable data
   useEffect(() => {
     const fetchAll = async () => {
@@ -93,7 +132,12 @@ const EditTimetable: React.FC = () => {
              setFixedYear(courseList[0].year||1);
              setFixedSection(courseList[0].section||'A');
           }
-          setTimetable(data.timetable || emptyMatrix());
+          // Normalize timetable so every cell is an array (supports legacy single-object cells)
+          const normalized = (data.timetable||[]).map((dayRow:any)=> dayRow.map((cell:any)=>{
+            if(!cell) return [] as TimetableSlot;
+            return Array.isArray(cell) ? cell as TimetableSlot : [cell as TimetableCell];
+          })) as TimetableSlot[][];
+          setTimetable(normalized.length? normalized : emptyMatrix());
         }
       } catch (err) {
         console.error('Failed to load data', err);
@@ -109,7 +153,7 @@ const EditTimetable: React.FC = () => {
     const newForms = [...forms];
     const prevType = newForms[index].type;
     let parsed: any = value;
-    if(name==='hoursPerWeek' || name==='year') parsed = parseInt(value,10)||0;
+    if(name==='hoursPerWeek' || name==='year' || name==='labNumber') parsed = parseInt(value,10)||0;
     newForms[index] = { ...newForms[index], [name]: parsed } as TimetableForm;
     setForms(newForms);
 
@@ -130,6 +174,9 @@ const EditTimetable: React.FC = () => {
         }) as TimetableSlot[];
       }));
     }
+    if(index===currentFormIndex && name==='facultyId'){
+      computeUnavailable(parsed);
+    }
   };
 
   const genId = () => Math.random().toString(36).slice(2,10);
@@ -139,10 +186,12 @@ const EditTimetable: React.FC = () => {
       {
         courseName: '',
         courseCode: '',
+        shortForm: '', // NEW
         type: 'theory',
         hoursPerWeek: 0,
         facultyId: '',
         additionalFacultyId: '',
+        labNumber: undefined,
         section: fixedSection,
         year: fixedYear,
         id: genId(),
@@ -189,18 +238,28 @@ const EditTimetable: React.FC = () => {
     const blockLength = isPractical ? Math.max(1,currentForm.hoursPerWeek) : 1;
     const slotIndices = Array.from({length:blockLength},(_,i)=>periodIdx+i);
 
-    // boundary check
+    // boundary check & faculty availability
     if(slotIndices[slotIndices.length-1] >= NUM_PERIODS){
       alert(`This subject requires ${blockLength} consecutive periods. Please choose an earlier period.`);
       return;
     }
 
+    // check faculty unavailable
+    for(const pIdx of slotIndices){
+      if(unavailable[dayIdx][pIdx]){
+        alert('Faculty already allocated in another class at this time');
+        return;
+      }
+    }
+
     const newEntry: TimetableCell = {
       courseName: currentForm.courseName,
       courseCode: currentForm.courseCode,
+      shortForm: currentForm.shortForm,
       facultyId: currentForm.facultyId,
       additionalFacultyId: currentForm.additionalFacultyId,
       type: currentForm.type,
+      labNumber: currentForm.labNumber,
       section: currentForm.section,
       year: currentForm.year,
       subjectId: currentForm.id
@@ -338,6 +397,15 @@ const EditTimetable: React.FC = () => {
                   <input name="courseCode" value={form.courseCode} onChange={(e) => handleInputChange(idx, e)} className="input-field" />
                 </div>
                 <div className="form-group">
+                  <label className="form-label">Short Form</label>
+                  <input
+                    name="shortForm"
+                    value={form.shortForm || ''}
+                    onChange={(e) => handleInputChange(idx, e)}
+                    className="input-field"
+                  />
+                </div>
+                <div className="form-group">
                   <label className="form-label">Type</label>
                   <select name="type" value={form.type} onChange={(e)=>handleInputChange(idx,e)} className="input-field">
                     <option value="theory">Theory</option>
@@ -354,24 +422,43 @@ const EditTimetable: React.FC = () => {
                   <input type="number" name="hoursPerWeek" min="1"  value={form.hoursPerWeek} onChange={(e)=>handleInputChange(idx,e)} className="input-field" />
                   <p className="text-xs text-gray-500 mt-1">Free periods available: {freePeriods}</p>
                 </div>
+                {(form.type==='practical' || form.type==='theory_practical') && (
+                  <div className="form-group">
+                    <label className="form-label">Lab Number</label>
+                    <select name="labNumber" value={form.labNumber ?? ''} onChange={(e)=>handleInputChange(idx,e)} className="input-field">
+                      <option value="">Select Lab</option>
+                      {[1,2,3].map(n=>(<option key={n} value={n}>Lab {n}</option>))}
+                    </select>
+                  </div>
+                )}
                 <div className="form-group">
                   <label className="form-label">{form.type==='honors'?'Ordinary Faculty':'Faculty'}</label>
-                  <select name="facultyId" value={form.facultyId} onChange={(e) => handleInputChange(idx, e)} className="input-field">
-                    <option value="">Select</option>
-                    {faculty.map((f) => (
-                      <option key={f._id} value={f._id}>
-                        {f.name} {f.grade?`(${f.grade})`:''}
-                      </option>
-                    ))}
-                  </select>
+                  <Select
+                    name="facultyId"
+                    value={faculty.find(f=>f._id===form.facultyId)? {value:form.facultyId,label:faculty.find(f=>f._id===form.facultyId)?.name}:null}
+                    onChange={opt=>{
+                      const value = opt? opt.value:'';
+                      handleInputChange(idx, {target:{name:'facultyId', value} } as any);
+                    }}
+                    options={faculty.map(f=>({value:f._id,label:`${f.name}${f.grade?` (${f.grade})`:''}`}))}
+                    isClearable
+                    classNamePrefix="react-select"
+                  />
                 </div>
                 {(form.type==='practical' || form.type==='theory_practical' || form.type==='honors') && (
                 <div className="form-group">
                     <label className="form-label">{form.type==='honors'?'Honors Faculty':'Additional Faculty (Practical)'}</label>
-                    <select name="additionalFacultyId" value={form.additionalFacultyId} onChange={(e)=>handleInputChange(idx,e)} className="input-field">
-                      <option value="">Select</option>
-                      {faculty.map(f=>(<option key={f._id} value={f._id}>{f.name} {f.grade?`(${f.grade})`:''}</option>))}
-                  </select>
+                    <Select
+                      name="additionalFacultyId"
+                      value={faculty.find(f=>f._id===form.additionalFacultyId)? {value:form.additionalFacultyId,label:faculty.find(f=>f._id===form.additionalFacultyId)?.name}:null}
+                      onChange={opt=>{
+                        const value = opt? opt.value:'';
+                        handleInputChange(idx, {target:{name:'additionalFacultyId', value}} as any);
+                      }}
+                      options={faculty.map(f=>({value:f._id,label:`${f.name}${f.grade?` (${f.grade})`:''}`}))}
+                      isClearable
+                      classNamePrefix="react-select"
+                    />
                 </div>
                 )}
                 {/* Year & Section are fixed for this timetable */}
@@ -410,7 +497,7 @@ const EditTimetable: React.FC = () => {
                           if(isMergeable){
                             while(periodIdx+span < NUM_PERIODS){
                               const next = timetable[dIdx]?.[periodIdx+span] || [];
-                              if(next && practicalTypes.includes(next[0].type) && next.map(s=>s.subjectId).sort().join('|') === sig){
+                              if(next && next.length && practicalTypes.includes(next[0].type) && next.map(s=>s.subjectId).sort().join('|') === sig){
                                 span++;
                               }else break;
                             }
@@ -444,8 +531,17 @@ const EditTimetable: React.FC = () => {
                           periodIdx += span;
                         }else{
                           const emptyIdx = periodIdx;
+                          const isUnavailable = unavailable[dIdx][emptyIdx];
                           cells.push(
-                            <td key={emptyIdx} className="table-cell cursor-pointer" onClick={()=>handleCellClick(dIdx,emptyIdx)} onDragOver={handleDragOver} onDrop={(e)=>handleDrop(dIdx,emptyIdx,e)} />
+                            <td key={emptyIdx} className={`table-cell cursor-pointer ${isUnavailable?'bg-red-50/60 cursor-not-allowed':''}`} onClick={()=>handleCellClick(dIdx,emptyIdx)} onDragOver={handleDragOver} onDrop={(e)=>handleDrop(dIdx,emptyIdx,e)}>
+                              {isUnavailable && (
+                                <div className="space-y-1 opacity-70 text-red-700 text-[10px]">
+                                  <div className="font-medium leading-none">{unavailable[dIdx][emptyIdx]?.courseName}</div>
+                                  <div>{unavailable[dIdx][emptyIdx]?.courseCode}</div>
+                                  <div>Year {unavailable[dIdx][emptyIdx]?.year} – Sec {unavailable[dIdx][emptyIdx]?.section}</div>
+                                </div>
+                              )}
+                            </td>
                           );
                           periodIdx++;
                         }

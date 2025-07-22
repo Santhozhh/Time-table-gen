@@ -13,6 +13,8 @@ interface TimetableCell {
   type: string;
   additionalFacultyId?: string;
   year?: number;
+  shortForm?: string;
+  labNumber?: number;
 }
 
 interface GeneratedTimetable {
@@ -176,7 +178,7 @@ const ViewStudentTimetables: React.FC = () => {
       .join(', ');
     return (
       <div className="space-y-1">
-        <div className="font-medium text-gray-800">{cell.courseName}</div>
+        <div className="font-medium text-gray-800">{cell.shortForm || cell.courseName}</div>
         <div className="text-sm text-blue-600">{cell.courseCode}</div>
         {names && <div className="text-xs text-gray-500">{names}</div>}
       </div>
@@ -277,6 +279,9 @@ const ViewStudentTimetables: React.FC = () => {
                               cells.push(
                                 <td key={p} colSpan={span} className="table-cell animate-pop" style={{animationDelay:`${p*40}ms`}}>
                                   {getCellContent(dIdx, p)}
+                                  {span>1 && (
+                                    <span className="block text-[9px] text-gray-500 mt-0.5">{span} periods</span>
+                                  )}
                              </td>
                               );
                               p += span;
