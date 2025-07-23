@@ -7,7 +7,7 @@ import { generatedTimetableApi } from '../services/api';
 import { usePeriods } from '../context/PeriodsContext';
 import { usePersistedState } from '../hooks/usePersistedState';
 import Select from 'react-select';
-
+const apis = import.meta.env.VITE_API_URL || '/api'; // Fallback for local dev
 interface TimetableForm {
   courseName: string;
   courseCode: string;
@@ -122,7 +122,7 @@ const EditTimetable: React.FC = () => {
   useEffect(() => {
     const fetchAll = async () => {
       try {
-        const facRes = await fetch('/api/faculty');
+        const facRes = await fetch(`${apis}/faculty`);
         setFaculty(await facRes.json());
         if (id) {
           const { data } = await generatedTimetableApi.getById(id);

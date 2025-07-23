@@ -4,7 +4,7 @@ import { generatedTimetableApi, facultyApi } from '../services/api';
 import {  MdDownload, MdEdit, MdDelete, MdChevronLeft, MdChevronRight, MdGroup } from 'react-icons/md';
 import { useNavigate } from 'react-router-dom';
 import { usePeriods } from '../context/PeriodsContext';
-
+const apis = import.meta.env.VITE_API_URL || '/api'; // Fallback for local dev
 interface TimetableCell {
   courseName: string;
   courseCode: string;
@@ -140,7 +140,7 @@ const ViewStudentTimetables: React.FC = () => {
   const downloadExcel = async () => {
     if (!selectedTimetable) return;
     try {
-      const res = await fetch(`/api/generated-timetables/${selectedTimetable._id}/excel`);
+      const res = await fetch(`${apis}/generated-timetables/${selectedTimetable._id}/excel`);
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');

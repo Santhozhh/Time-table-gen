@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { MdPerson, MdDelete, MdEdit, MdAdd } from 'react-icons/md';
 import { useToast } from '../components/ToastProvider';
 import { usePersistedState } from '../hooks/usePersistedState';
-
+const apis = import.meta.env.VITE_API_URL 
 interface Faculty {
   _id: string;
   name: string;
@@ -65,7 +65,7 @@ const FacultyEdit: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const url = editingId ? `/api/faculty/${editingId}` : '/api/faculty';
+    const url = editingId ? `${apis}/faculty/${editingId}` : `${apis}/faculty`;
     const method = editingId ? 'PUT' : 'POST';
     try{
       const res = await fetch(url,{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(formData)});
@@ -92,7 +92,7 @@ const FacultyEdit: React.FC = () => {
     }
 
     try {
-      const response = await fetch(`/api/faculty/${id}`, {
+      const response = await fetch(`${apis}/faculty/${id}`, {
         method: 'DELETE',
       });
       
