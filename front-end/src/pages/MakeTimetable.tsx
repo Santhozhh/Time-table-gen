@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { MdAdd, MdSchedule, MdSchool,  MdPlayArrow, MdSave, MdDelete, MdClose, MdEdit, MdChevronLeft } from 'react-icons/md';
-import { generatedTimetableApi } from '../services/api';
+import { facultyApi, generatedTimetableApi } from '../services/api';
 import { usePeriods } from '../context/PeriodsContext';
 import Select from 'react-select';
 import { usePersistedState } from '../hooks/usePersistedState';
@@ -96,9 +96,12 @@ const MakeTimetable: React.FC = () => {
     return result;
   };
 
-  // compute unavailable slots for faculty
-  const computeUnavailable = async (facultyId:string)=>{
-    if(!facultyId) { setUnavailable(Array(6).fill(null).map(()=>Array(NUM_PERIODS).fill(null))); return; }
+  // compute unavailable slots for one or more faculty members (primary + additional)
+  const computeUnavailable = async (facultyIds:string[] = [])=>{
+    if(!facultyIds.length){
+      setUnavailable(Array(6).fill(null).map(()=>Array(NUM_PERIODS).fill(null)));
+      return;
+    }
     try{
       const { data } = await generatedTimetableApi.getAll();
       const matrix:(TimetableCell|null)[][] = Array(6).fill(null).map(()=>Array(NUM_PERIODS).fill(null));
@@ -106,7 +109,7 @@ const MakeTimetable: React.FC = () => {
         tt.timetable.forEach((dayRow:any, dIdx:number)=>{
           dayRow.forEach((cell:any, pIdx:number)=>{
             const entries:Array<any> = Array.isArray(cell) ? cell : cell ? [cell] : [];
-            const found = entries.find((c)=>c.facultyId===facultyId || c.additionalFacultyId===facultyId);
+            const found = entries.find((c)=> facultyIds.includes(c.facultyId) || (c.additionalFacultyId && facultyIds.includes(c.additionalFacultyId)) );
             if(found){
               matrix[dIdx][pIdx]=found as TimetableCell;
             }
@@ -114,7 +117,7 @@ const MakeTimetable: React.FC = () => {
         });
       });
       setUnavailable(matrix);
-    }catch(err){console.error('unavailable calc err',err);}
+    }catch(err){console.error('unavailable calc err',err);}  
   };
 
   useEffect(() => {
@@ -155,30 +158,17 @@ const MakeTimetable: React.FC = () => {
       }
     }
     setForms(newForms);
-    if(name==='type' && (prevType==='practical' || prevType==='theory_practical') && !['practical','theory_practical'].includes(parsed)){
-      const subjId = newForms[index].id;
-      setTimetable(prev=> prev.map(day=>{
-        let hasFirst=false;
-        return day.map(slot=>{
-          const filtered = slot.filter(s=> s.subjectId!==subjId) as TimetableSlot;
-          if(!hasFirst && slot.some(s=> s.subjectId===subjId)){
-            const first = slot.find(s=> s.subjectId===subjId)!;
-            filtered.push(first);
-            hasFirst = true;
-          }
-          return filtered;
-        }) as TimetableSlot[];
-      }));
-    }
-    if(index===currentFormIndex && (e.target.name==='facultyId')){
-      computeUnavailable(e.target.value);
+    if(index===currentFormIndex && (e.target.name==='facultyId' || e.target.name==='additionalFacultyId')){
+      const ids = [newForms[index].facultyId, newForms[index].additionalFacultyId].filter(Boolean);
+      computeUnavailable(ids as string[]);
     }
   };
 
-  // when currentFormIndex changes update unavailable for that faculty
-  useEffect(()=>{
-    const facId = forms[currentFormIndex]?.facultyId;
-    computeUnavailable(facId);
+  // Recompute whenever form tab changes (primary or additional)
+  useEffect(() => {
+    const fac1 = forms[currentFormIndex]?.facultyId;
+    const fac2 = forms[currentFormIndex]?.additionalFacultyId;
+    computeUnavailable([fac1, fac2].filter(Boolean) as string[]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   },[currentFormIndex]);
 
@@ -279,6 +269,14 @@ const MakeTimetable: React.FC = () => {
       )
     );
 
+       if (!entryExistsInAll) {
+      const currentHours = timetable.flat(2).filter(c => c.subjectId === currentForm.id).length;
+      const hoursToAdd = slotIndices.length;
+      if (currentHours + hoursToAdd > currentForm.hoursPerWeek) {
+        alert('All hours for this course have already been allocated!');
+        return;
+      }
+    }
     const newTimetable = timetable.map((day, dIdx) =>
       day.map((slot, pIdx) => {
         if (dIdx === dayIndex && slotIndices.includes(pIdx)) {
@@ -374,7 +372,7 @@ const MakeTimetable: React.FC = () => {
   };
 
   // Helper to render a single subject item (shared by grouped lists)
-  const renderSubjectItem = (subj: TimetableForm, idx: number) => {
+  const renderSubjectItem = (subj: TimetableForm, idx: number,) => {
     // Guard: ensure subject matches requested category will be handled by caller
     const allocated = timetable.flat(2).filter(c=> c.subjectId===subj.id).length;
     const fully = allocated >= subj.hoursPerWeek && subj.hoursPerWeek>0;
@@ -392,7 +390,11 @@ const MakeTimetable: React.FC = () => {
       >
         <div>
           <p className="font-medium text-gray-800">{subj.courseName}</p>
-          <p className="text-sm text-blue-600">{subj.courseCode}</p>
+          <p className="text-sm text-blue-600">{subj.courseCode }</p>
+          <p className="text-xs text-gray-500">{subj.facultyId ? `(${faculty.find(facultyId => facultyId._id === subj.facultyId)?.name || 'Unknown Faculty'})`: ''}</p>
+          {subj.additionalFacultyId && (
+            <p className="text-xs text-gray-500">Additional: {faculty.find(facultyId => facultyId._id === subj.additionalFacultyId)?.name || 'Unknown Faculty'}</p>
+          )}
         </div>
         <div className="text-sm text-gray-500 capitalize">{subj.type}</div>
         <div className="text-xs text-gray-500">Hrs {allocated}/{subj.hoursPerWeek}</div>
@@ -534,13 +536,15 @@ const MakeTimetable: React.FC = () => {
                       onChange={option => {
                         const value = option ? option.value : '';
                         setForms(prev => {
-                          const newForms = [...prev];
-                          newForms[index] = { ...newForms[index], facultyId: value };
-                          return newForms;
+                          const updated = [...prev];
+                          updated[index] = { ...updated[index], facultyId: value };
+                          // Recompute unavailable inside state update callback to ensure fresh state
+                          if(index === currentFormIndex){
+                            const ids = [value, updated[index].additionalFacultyId].filter(Boolean) as string[];
+                            computeUnavailable(ids);
+                          }
+                          return updated;
                         });
-                        if(index === currentFormIndex) {
-                          computeUnavailable(value);
-                        }
                       }}
                       options={faculty.map(f => ({ value: f._id, label: `${f.name}${f.grade ? ` (${f.grade})` : ''}` }))}
                       classNamePrefix="react-select"
@@ -558,9 +562,14 @@ const MakeTimetable: React.FC = () => {
                         onChange={option => {
                           const value = option ? option.value : '';
                           setForms(prev => {
-                            const newForms = [...prev];
-                            newForms[index] = { ...newForms[index], additionalFacultyId: value };
-                            return newForms;
+                            const updated = [...prev];
+                            updated[index] = { ...updated[index], additionalFacultyId: value };
+                            // If this form is active, recompute unavailable
+                            if(index === currentFormIndex){
+                               const ids = [updated[index].facultyId, value].filter(Boolean) as string[];
+                               computeUnavailable(ids);
+                            }
+                            return updated;
                           });
                         }}
                         options={faculty.map(f => ({ value: f._id, label: `${f.name}${f.grade ? ` (${f.grade})` : ''}` }))}
@@ -715,6 +724,7 @@ const MakeTimetable: React.FC = () => {
                                 <div className="space-y-1 opacity-70 text-red-700">
                                   <div className="font-medium">{unavailable[dayIndex][emptyIdx]?.courseName}</div>
                                   <div className="text-sm">{unavailable[dayIndex][emptyIdx]?.courseCode}</div>
+                                  <div className="text-xs">{faculty.find(f => f._id === unavailable[dayIndex][emptyIdx]?.facultyId)?.name || 'Unknown Faculty'}</div>
                                   <div className="text-xs">Year {unavailable[dayIndex][emptyIdx]?.year} – Sec {unavailable[dayIndex][emptyIdx]?.section}</div>
                                 </div>
                               )}

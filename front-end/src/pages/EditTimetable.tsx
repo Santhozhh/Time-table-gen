@@ -86,8 +86,8 @@ const EditTimetable: React.FC = () => {
   };
 
   // helper to compute unavailable slots for a faculty across all generated timetables (excluding this one)
-  const computeUnavailable = async (facultyId:string)=>{
-    if(!facultyId){
+  const computeUnavailable = async (facultyIds:string[] = [])=>{
+    if(!facultyIds.length){
       setUnavailable(Array(6).fill(null).map(()=>Array(NUM_PERIODS).fill(null)));
       return;
     }
@@ -99,7 +99,7 @@ const EditTimetable: React.FC = () => {
         tt.timetable.forEach((dayRow:any,dIdx:number)=>{
           dayRow.forEach((cell:any,pIdx:number)=>{
             const entries:Array<any> = Array.isArray(cell)? cell : cell? [cell]: [];
-            const found = entries.find((c:any)=> c.facultyId===facultyId || c.additionalFacultyId===facultyId);
+            const found = entries.find((c:any)=> facultyIds.includes(c.facultyId) || (c.additionalFacultyId && facultyIds.includes(c.additionalFacultyId)) );
             if(found){
               matrix[dIdx][pIdx] = found as TimetableCell;
             }
@@ -112,8 +112,9 @@ const EditTimetable: React.FC = () => {
 
   // recompute when currentFormIndex changes
   useEffect(()=>{
-    const facId = forms[currentFormIndex]?.facultyId;
-    computeUnavailable(facId);
+    const fac1 = forms[currentFormIndex]?.facultyId;
+    const fac2 = forms[currentFormIndex]?.additionalFacultyId;
+    computeUnavailable([fac1, fac2].filter(Boolean) as string[]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   },[currentFormIndex]);
 
@@ -174,8 +175,10 @@ const EditTimetable: React.FC = () => {
         }) as TimetableSlot[];
       }));
     }
-    if(index===currentFormIndex && name==='facultyId'){
-      computeUnavailable(parsed);
+    if(index===currentFormIndex && (name==='facultyId' || name==='additionalFacultyId')){
+      const f1 = (name==='facultyId'? parsed : newForms[index].facultyId) as string;
+      const f2 = (name==='additionalFacultyId'? parsed : newForms[index].additionalFacultyId) as string;
+      computeUnavailable([f1, f2].filter(Boolean) as string[]);
     }
   };
 
