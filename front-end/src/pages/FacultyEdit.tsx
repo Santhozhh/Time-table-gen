@@ -51,7 +51,7 @@ const FacultyEdit: React.FC = () => {
 
   const fetchFaculty = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/faculty');
+      const response = await fetch('api/faculty');
       if (!response.ok) {
         throw new Error('Failed to fetch faculty list');
       }
@@ -65,7 +65,7 @@ const FacultyEdit: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const url = editingId ? `http://localhost:5000/api/faculty/${editingId}` : 'http://localhost:5000/api/faculty';
+    const url = editingId ? `/api/faculty/${editingId}` : '/api/faculty';
     const method = editingId ? 'PUT' : 'POST';
     try{
       const res = await fetch(url,{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(formData)});
@@ -92,7 +92,7 @@ const FacultyEdit: React.FC = () => {
     }
 
     try {
-      const response = await fetch(`http://localhost:5000/api/faculty/${id}`, {
+      const response = await fetch(`/api/faculty/${id}`, {
         method: 'DELETE',
       });
       

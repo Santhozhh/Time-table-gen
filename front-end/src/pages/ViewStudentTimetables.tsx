@@ -140,7 +140,7 @@ const ViewStudentTimetables: React.FC = () => {
   const downloadExcel = async () => {
     if (!selectedTimetable) return;
     try {
-      const res = await fetch(`http://localhost:5000/api/generated-timetables/${selectedTimetable._id}/excel`);
+      const res = await fetch(`/api/generated-timetables/${selectedTimetable._id}/excel`);
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');

@@ -122,7 +122,7 @@ const EditTimetable: React.FC = () => {
   useEffect(() => {
     const fetchAll = async () => {
       try {
-        const facRes = await fetch('http://localhost:5000/api/faculty');
+        const facRes = await fetch('/api/faculty');
         setFaculty(await facRes.json());
         if (id) {
           const { data } = await generatedTimetableApi.getById(id);

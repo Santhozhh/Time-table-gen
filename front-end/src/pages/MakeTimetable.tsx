@@ -123,7 +123,7 @@ const MakeTimetable: React.FC = () => {
   useEffect(() => {
     const fetchFaculty = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/faculty');
+        const response = await fetch('/api/faculty');
         const data = await response.json();
         setFaculty(data);
       } catch (error) {
