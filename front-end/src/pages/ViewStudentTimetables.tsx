@@ -248,6 +248,7 @@ const ViewStudentTimetables: React.FC = () => {
                 </div>
 
                 {/** ----- Timetable table with time row ----- */}
+                <div className="table-container overflow-x-auto">
                 <table className="w-full border-collapse">
                   <thead>
                     <tr>
@@ -298,6 +299,7 @@ const ViewStudentTimetables: React.FC = () => {
                     ))}
                   </tbody>
                 </table>
+                </div>
               </div>
             ) : (
               <div className="flex flex-col items-start gap-4">

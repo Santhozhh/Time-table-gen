@@ -177,6 +177,7 @@ const ViewFacultyTimetables: React.FC = () => {
                 })()}
                 
               </h3>
+              <div className='table-container overflow-x-auto'>
               <table className="w-full border-collapse">
                 <thead>
                   <tr>
@@ -226,6 +227,7 @@ const ViewFacultyTimetables: React.FC = () => {
                   ))}
                 </tbody>
               </table>
+              </div>
             </div>
           )}
         </div>
