@@ -7,7 +7,11 @@ export default defineConfig({
   plugins: [react(),tailwindcss()],
   server : {
     proxy: {
-      '/api': 'https://time-table-gen-1.onrender.com'
+      '/api': {
+        target: 'https://time-table-gen-1.onrender.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, '/api'),
     }
   }
+}
 })
