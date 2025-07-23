@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { MdAdd, MdSchedule, MdSchool,  MdPlayArrow, MdSave, MdDelete, MdClose, MdEdit, MdChevronLeft } from 'react-icons/md';
-import { facultyApi, generatedTimetableApi } from '../services/api';
+import {  generatedTimetableApi } from '../services/api';
 import { usePeriods } from '../context/PeriodsContext';
 import Select from 'react-select';
 import { usePersistedState } from '../hooks/usePersistedState';
@@ -146,11 +146,7 @@ const MakeTimetable: React.FC = () => {
     if (name === 'year' || name === 'hoursPerWeek' || name==='labNumber') {
       parsed = parseInt(value, 10) || 0;
     }
-    const prevType = newForms[index].type;
-    newForms[index] = {
-      ...newForms[index],
-      [name]: parsed
-    };
+
     // if updating year/section of first subject propagate to others
     if(index===0 && (name==='year' || name==='section')){
       for(let i=1;i<newForms.length;i++){
