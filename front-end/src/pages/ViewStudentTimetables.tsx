@@ -42,7 +42,8 @@ const ViewStudentTimetables: React.FC = () => {
   const [faculty, setFaculty] = useState<any[]>([]);
   const [selectedYS, setSelectedYS] = useState<YearSection >(predefinedYearSections[0]);
   const { numPeriods: NUM_PERIODS } = usePeriods();
-  const [matrix, setMatrix] = useState<(TimetableCell | null)[][]>(Array(6).fill(null).map(() => Array(NUM_PERIODS).fill(null)));
+  // Change matrix to hold arrays of TimetableCell (or null)
+  const [matrix, setMatrix] = useState<(TimetableCell[] | null)[][]>(Array(6).fill(null).map(() => Array(NUM_PERIODS).fill(null)));
   const [loading, setLoading] = useState(true);
   const [selectedTimetable, setSelectedTimetable] = useState<GeneratedTimetable | null>(null);
   const [listCollapsed, setListCollapsed] = useState(false);
@@ -107,8 +108,9 @@ const ViewStudentTimetables: React.FC = () => {
        const filtered=tt.timetable.map(dayRow=>dayRow.map(slot=>{
           if(!slot) return null;
           const entries=Array.isArray(slot)?slot:[slot];
-          const match=entries.find(c=>Number(c.year)===selectedYS.year && c.section===selectedYS.section);
-          return match||null;
+          // Collect all matches for selected year/section
+          const matches = entries.filter(c=>Number(c.year)===selectedYS.year && c.section===selectedYS.section);
+          return matches.length ? matches : null;
        }));
         setMatrix(filtered);
         setSelectedTimetable(tt);
@@ -127,8 +129,8 @@ const ViewStudentTimetables: React.FC = () => {
         const filtered=tt.timetable.map(dayRow=>dayRow.map(slot=>{
           if(!slot) return null;
           const entries=Array.isArray(slot)?slot:[slot];
-          const match=entries.find(c=>Number(c.year)===selectedYS.year && c.section===selectedYS.section);
-          return match||null;
+          const matches = entries.filter(c=>Number(c.year)===selectedYS.year && c.section===selectedYS.section);
+          return matches.length ? matches : null;
         }));
         setMatrix(filtered);
         setSelectedTimetable(tt);
@@ -169,18 +171,24 @@ const ViewStudentTimetables: React.FC = () => {
   };
 
   const getCellContent = (day: number, period: number) => {
-    const cell = matrix[day][period];
-    if (!cell) return null;
-    const names = [cell.facultyId, cell.additionalFacultyId]
-      .filter(Boolean)
-      .map((id) => faculty.find((f) => f._id === id)?.name)
-      .filter(Boolean)
-      .join(', ');
+    const cellArr = matrix[day][period];
+    if (!cellArr || !Array.isArray(cellArr)) return null;
     return (
       <div className="space-y-1">
-        <div className="font-medium text-gray-800">{cell.shortForm || cell.courseName}</div>
-        <div className="text-sm text-blue-600">{cell.courseCode}</div>
-        {names && <div className="text-xs text-gray-500">{names}</div>}
+        {cellArr.map((cell, idx) => {
+          const names = [cell.facultyId, cell.additionalFacultyId]
+            .filter(Boolean)
+            .map((id) => faculty.find((f) => f._id === id)?.name)
+            .filter(Boolean)
+            .join(', ');
+          return (
+            <div key={idx} className="border-b last:border-none pb-1 mb-1 last:pb-0 last:mb-0">
+              <div className="font-medium text-gray-800">{cell.shortForm || cell.courseName}</div>
+              <div className="text-sm text-blue-600">{cell.courseCode}</div>
+              {names && <div className="text-xs text-gray-500">{names}</div>}
+            </div>
+          );
+        })}
       </div>
     );
   };
@@ -261,29 +269,33 @@ const ViewStudentTimetables: React.FC = () => {
                       <tr key={day} className="animate-slide-up" style={{animationDelay: `${dIdx*50}ms`}}>
                         <td className="table-header">{day}</td>
                         {/* Dynamically render cells with horizontal merging */}
-                        {(()=>{
+                        {(() => {
                           const cells:JSX.Element[] = [];
                           for(let p=0; p<NUM_PERIODS;){
-                            const cell = matrix[dIdx][p];
-                            if(cell){
+                            const cellArr = matrix[dIdx][p];
+                            if(cellArr && Array.isArray(cellArr) && cellArr.length > 0){
+                              const cell = cellArr[0]; // Use first entry for merge logic
                               const practicalTypes = ['practical','theory_practical'];
                               const isMergeable = practicalTypes.includes(cell.type);
                               let span = 1;
                               if(isMergeable){
                                 while(p+span < NUM_PERIODS){
-                                  const next = matrix[dIdx][p+span];
-                                  if(next && practicalTypes.includes(next.type) && next.courseCode===cell.courseCode && next.section===cell.section && next.year===cell.year){
-                                    span++;
+                                  const nextArr = matrix[dIdx][p+span];
+                                  if(nextArr && Array.isArray(nextArr) && nextArr.length > 0){
+                                    const next = nextArr[0];
+                                    if(practicalTypes.includes(next.type) && next.courseCode===cell.courseCode && next.section===cell.section && next.year===cell.year){
+                                      span++;
+                                    }else break;
                                   }else break;
                                 }
                               }
                               cells.push(
                                 <td key={p} colSpan={span} className="table-cell animate-pop" style={{animationDelay:`${p*40}ms`}}>
                                   {getCellContent(dIdx, p)}
-                                  {span>1 && (
+                                  {span > 1 && (
                                     <span className="block text-[9px] text-gray-500 mt-0.5">{span} periods</span>
                                   )}
-                             </td>
+                                </td>
                               );
                               p += span;
                             }else{
