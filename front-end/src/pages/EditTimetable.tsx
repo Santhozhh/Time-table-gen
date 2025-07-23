@@ -269,19 +269,20 @@ const EditTimetable: React.FC = () => {
       timetable[dayIdx][colIdx].some(s => s.subjectId === newEntry.subjectId)
     );
 
+    // ---- Hours per week validation BEFORE mutating timetable ----
+    if (!entryExistsInAll) {
+      const currentHours = timetable.flat(2).filter(c => c.subjectId === currentForm.id).length;
+      const hoursToAdd = slotIndices.length;
+      if (currentHours + hoursToAdd > currentForm.hoursPerWeek) {
+        alert('All hours for this course have already been allocated!');
+        return;
+      }
+    }
+
     const newTT = timetable.map((day,rowIdx)=> day.map((slot,colIdx)=>{
       if(rowIdx===dayIdx && slotIndices.includes(colIdx)){
         if(entryExistsInAll){
           return slot.filter(s=> s.subjectId!==newEntry.subjectId);
-        }
-        // Before adding, ensure weekly hours limit isn't exceeded; only evaluate on first slot.
-        if(colIdx === slotIndices[0]){
-          const currentHours = timetable.flat(2).filter(c=> c.subjectId===currentForm.id).length;
-          const hoursToAdd = slotIndices.length;
-          if(currentHours + hoursToAdd > currentForm.hoursPerWeek){
-             alert('All hours for this course have already been allocated!');
-             return slot;
-          }
         }
         // Avoid duplicate entry in slot
         if(slot.some(s=> s.subjectId===newEntry.subjectId)) return slot;
