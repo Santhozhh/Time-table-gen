@@ -18,10 +18,10 @@ const startServer = async () => {
   try {
     await connectDB();
     
-    app.use('/api/faculty', facultyRoutes);
-    app.use('/api/timetable', timetableRoutes);
-    app.use('/api/generated-timetables', generatedTimetableRoutes);
-    app.use('/api/settings', settingsRoutes);
+    app.use('/faculty', facultyRoutes);
+    app.use('/timetable', timetableRoutes);
+    app.use('/generated-timetables', generatedTimetableRoutes);
+    app.use('/settings', settingsRoutes);
 
     app.get('/', (req, res) => {
       res.send('Timetable Generator API is running');
