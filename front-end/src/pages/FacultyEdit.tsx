@@ -52,7 +52,7 @@ const FacultyEdit: React.FC = () => {
 
   const fetchFaculty = async () => {
     try {
-      const response = await fetch('api/faculty');
+      const response = await fetch(`${apis}/faculty`);
       if (!response.ok) {
         throw new Error('Failed to fetch faculty list');
       }
