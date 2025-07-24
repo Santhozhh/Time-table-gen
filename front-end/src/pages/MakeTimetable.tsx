@@ -140,21 +140,26 @@ const MakeTimetable: React.FC = () => {
 
   const handleInputChange = (index: number, e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    const newForms = [...forms];
     let parsed: any = value;
     // Convert numeric fields to numbers to maintain consistent types
     if (name === 'year' || name === 'hoursPerWeek' || name==='labNumber') {
       parsed = parseInt(value, 10) || 0;
     }
 
-    // if updating year/section of first subject propagate to others
+    // Build a fresh copy of the form being edited
+    const updatedForm = { ...forms[index], [name]: parsed } as TimetableForm;
+
+    // Create a new array with the updated form at the correct index
+    let newForms = forms.map((f, i) => (i === index ? updatedForm : f));
+
+    // If updating year/section of first subject propagate to others
     if(index===0 && (name==='year' || name==='section')){
-      for(let i=1;i<newForms.length;i++){
-        newForms[i] = { ...newForms[i], [name]: parsed } as TimetableForm;
-      }
+      newForms = newForms.map((f,i)=> i===0 ? f : ({ ...f, [name]: parsed })) as TimetableForm[];
     }
+
     setForms(newForms);
-    if(index===currentFormIndex && (e.target.name==='facultyId' || e.target.name==='additionalFacultyId')){
+
+    if(index===currentFormIndex && (name==='facultyId' || name==='additionalFacultyId')){
       const ids = [newForms[index].facultyId, newForms[index].additionalFacultyId].filter(Boolean);
       computeUnavailable(ids as string[]);
     }
