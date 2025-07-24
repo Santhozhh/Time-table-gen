@@ -76,6 +76,7 @@ const ViewLabTimetables: React.FC = () => {
         ))}
       </div>
 
+      <div className="overflow-x-auto">
       <table className="w-full border-collapse">
         <thead>
           <tr>
@@ -127,6 +128,7 @@ const ViewLabTimetables: React.FC = () => {
           ))}
         </tbody>
       </table>
+      </div>
     </div>
   );
 };

@@ -1,5 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
-import { MdSchedule, MdPerson, MdGroup, MdEdit, MdChevronLeft, MdChevronRight, MdEmail , MdComputer , MdSettings} from 'react-icons/md';
+import { MdSchedule, MdPerson, MdGroup, MdEdit, MdChevronLeft, MdChevronRight, MdEmail , MdComputer , MdSettings, MdHome  } from 'react-icons/md';
 import { FaGraduationCap } from 'react-icons/fa';
 import { ToastProvider } from './components/ToastProvider';
 import { PeriodsProvider } from './context/PeriodsContext';
@@ -7,7 +7,7 @@ import MakeTimetable from './pages/MakeTimetable';
 import ViewStudentTimetables from './pages/ViewStudentTimetables';
 import Home from './pages/Home';
 import ViewFacultyTimetables from './pages/ViewFacultyTimetables';
-import FacultyEdit from './pages/FacultyEdit';
+import FacultyEdit from './pages/FacultyEdit';  
 import EditPeriods from './pages/EditPeriods';
 import EditTimetable from './pages/EditTimetable';
 import ViewLabTimetables from './pages/ViewLabTimetables';
@@ -39,7 +39,16 @@ const NavLink = ({ to, icon, text, collapsed }: { to: string; icon: React.ReactN
 };
 
 function App() {
-  const [collapsed, setCollapsed] = React.useState(false);
+  const [collapsed, setCollapsed] = React.useState<boolean>(()=> window.innerWidth < 768);
+
+  React.useEffect(()=>{
+    const handler = () => {
+      if(window.innerWidth < 768 && !collapsed) setCollapsed(true);
+      else if(window.innerWidth >= 768 && collapsed) setCollapsed(false);
+    };
+    window.addEventListener('resize', handler);
+    return ()=> window.removeEventListener('resize', handler);
+  },[collapsed]);
   return (
     <ToastProvider>
     <PeriodsProvider>
@@ -49,7 +58,7 @@ function App() {
         <nav className={`${collapsed ? 'w-20' : 'w-72'} bg-white shadow-xl p-6 flex flex-col fixed h-full transition-all duration-300 animate-slide-in-left`}>
           <div className={`flex items-center mb-12 px-4 ${collapsed ? 'justify-center' : 'gap-4'}`}>
             <div className={`rounded-2xl ${collapsed ? '' : 'shadow-lg bg-white'} p-3`}>
-              <FaGraduationCap className="text-3xl text-indigo-700" />
+              <FaGraduationCap className="text-3xl text-indigo-700"  />
             </div>
             {!collapsed && (
             <h1 className="text-xl font-bold text-shadow-blue-50 leading-tight">
@@ -57,7 +66,21 @@ function App() {
             </h1>
             )}
           </div>
+          <button
+              className="p-3 text-2xl rounded-full hover:bg-gray-100 transition-colors focus:outline-none absolute top-1/2 -translate-y-1/2 right-0"
+              onClick={() => setCollapsed(!collapsed)}
+              title={collapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
+            >
+              {collapsed ? <MdChevronRight /> : <MdChevronLeft />}
+            </button>
           <ul className="space-y-3 flex-1">
+          <li >
+              <NavLink 
+                to="/" 
+                icon={<MdHome />} 
+                text="Home" collapsed={collapsed}
+              />
+            </li>
             <li >
               <NavLink 
                 to="/make-timetable" 
@@ -122,13 +145,7 @@ function App() {
               <MdEmail />
           <h1> {!collapsed && <span className="text-xs font-medium text-gray-700">Contact </span>}</h1>
             </a>
-            <button
-              className="p-3 text-2xl rounded-full hover:bg-gray-100 transition-colors focus:outline-none"
-              onClick={() => setCollapsed(!collapsed)}
-              title={collapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
-            >
-              {collapsed ? <MdChevronRight /> : <MdChevronLeft />}
-            </button>
+            
           </div>
         </nav>
         <main className={`flex-1 ${collapsed ? 'ml-20' : 'ml-72'} p-8 bg-[#f8fafc] min-h-screen transition-all duration-300`}>
