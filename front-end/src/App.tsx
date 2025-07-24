@@ -1,5 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
-import { MdSchedule, MdPerson, MdGroup, MdEdit, MdChevronLeft, MdChevronRight, MdEmail , MdComputer } from 'react-icons/md';
+import { MdSchedule, MdPerson, MdGroup, MdEdit, MdChevronLeft, MdChevronRight, MdEmail , MdComputer , MdSettings} from 'react-icons/md';
 import { FaGraduationCap } from 'react-icons/fa';
 import { ToastProvider } from './components/ToastProvider';
 import { PeriodsProvider } from './context/PeriodsContext';
@@ -96,8 +96,8 @@ function App() {
             <li>
               <NavLink
                 to="/edit-periods"
-                icon={<MdSchedule />}
-                text="Edit Periods / Time"
+                icon={<MdSettings />}
+                text="Edit"
                 collapsed={collapsed}
               />
             </li>
