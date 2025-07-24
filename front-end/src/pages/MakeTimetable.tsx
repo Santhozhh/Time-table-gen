@@ -14,7 +14,7 @@ interface TimetableForm {
   hoursPerWeek: number;
   facultyId: string;
   additionalFacultyId?: string;
-  labNumber?: number; // NEW – Lab 1/2/3 only for practical subjects
+  labNumber?: number | string; // NEW – Lab 1/2/3 only for practical subjects
   section: string;
   year: number; // 1 – 4
   id: string; // unique identifier for tracking
@@ -36,7 +36,7 @@ interface TimetableCell {
   facultyId: string;
   additionalFacultyId?: string;
   type: 'theory' | 'practical' | 'theory_practical' | 'one_credit' | 'honors' | 'other'| 'placement' | 'project Work';
-  labNumber?: number; // NEW
+  labNumber?: number | string; // NEW
   section: string;
   year?: number; // optional for backward compatibility
   subjectId: string; // link back to form
@@ -66,6 +66,8 @@ const MakeTimetable: React.FC = () => {
   }]);
 
   const [faculty, setFaculty] = useState<Faculty[]>([]);
+  const [sections, setSections] = useState<string[]>(['A','B','C']);
+  const [labs, setLabs] = useState<number[]>([1,2,3]);
   const { numPeriods: NUM_PERIODS } = usePeriods();
   const emptyMatrix = () => Array(6).fill(null).map(() => Array(NUM_PERIODS).fill(null).map(()=>[] as TimetableSlot));
   const [timetable, setTimetable] = usePersistedState<TimetableSlot[][]>(`${classKey}_matrix`, emptyMatrix());
@@ -126,6 +128,12 @@ const MakeTimetable: React.FC = () => {
         const response = await fetch(`${apis}/faculty`);
         const data = await response.json();
         setFaculty(data);
+        // Fetch settings for sections & labs
+        try {
+          const settings = await fetch(`${apis}/settings/periods`).then(r=>r.json());
+          if(Array.isArray(settings.sections)) setSections(settings.sections);
+          if(Array.isArray(settings.labNumbers)) setLabs(settings.labNumbers);
+        }catch(e){}
       } catch (error) {
         console.error('Error fetching faculty:', error);
       }
@@ -142,8 +150,14 @@ const MakeTimetable: React.FC = () => {
     const { name, value } = e.target;
     let parsed: any = value;
     // Convert numeric fields to numbers to maintain consistent types
-    if (name === 'year' || name === 'hoursPerWeek' || name==='labNumber') {
+    if (name === 'year' || name === 'hoursPerWeek') {
       parsed = parseInt(value, 10) || 0;
+    } else if (name==='labNumber') {
+      if(value==='') parsed = undefined;
+      else {
+        const num = parseInt(value,10);
+        parsed = Number.isNaN(num) ? value : num;
+      }
     }
 
     // Build a fresh copy of the form being edited
@@ -523,7 +537,7 @@ const MakeTimetable: React.FC = () => {
                         className="input-field"
                       >
                         <option value="">Select Lab</option>
-                        {[1,2,3].map(n=>(<option key={n} value={n}>Lab {n}</option>))}
+                        {labs.map(n=>(<option key={n} value={n}>Lab {n}</option>))}
                         <option value="other">Other</option>
                       </select>
                     </div>
@@ -593,7 +607,7 @@ const MakeTimetable: React.FC = () => {
                   <div className="form-group">
                     <label className="form-label">Section</label>
                     <select name="section" value={form.section} onChange={(e)=>handleInputChange(index,e)} className="input-field">
-                      {['A','B','C'].map(sec=>(<option key={sec} value={sec}>{sec}</option>))}
+                      {sections.map(sec=>(<option key={sec} value={sec}>{sec}</option>))}
                     </select>
                   </div>
                   </>) }
