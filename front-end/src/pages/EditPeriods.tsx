@@ -67,6 +67,16 @@ const EditPeriods: React.FC = () => {
     }
   };
 
+  const addLab = () => {
+    const raw = newLab.trim();
+    if(!raw) return;
+    const match = raw.match(/\d+/);
+    if(!match) return;
+    const num = parseInt(match[0],10);
+    if(num>0 && !labs.includes(num)) setLabs([...labs,num]);
+    setNewLab('');
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="card">
@@ -134,12 +144,8 @@ const EditPeriods: React.FC = () => {
                   ))}
                 </div>
                 <div className="flex gap-2">
-                  <input value={newLab} onChange={e=>setNewLab(e.target.value)} placeholder="Add lab number" className="input-field flex-1" />
-                  <button type="button" className="btn-secondary" onClick={()=>{
-                    const num=parseInt(newLab,10);
-                    if(num>0 && !labs.includes(num)) setLabs([...labs,num]);
-                    setNewLab('');
-                  }}><MdAdd/></button>
+                  <input value={newLab} onChange={e=>setNewLab(e.target.value)} placeholder="Add lab number" className="input-field flex-1" onKeyDown={e=>{ if(e.key==='Enter'){ e.preventDefault(); addLab(); }}} />
+                  <button type="button" className="btn-secondary" onClick={addLab}><MdAdd/></button>
                 </div>
               </div>
 

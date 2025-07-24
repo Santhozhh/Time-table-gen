@@ -21,9 +21,9 @@ interface GeneratedTimetable {
 }
 
 const ViewLabTimetables: React.FC = () => {
-  const [labNumber, setLabNumber] = useState<number>(1);
+  const { labNumbers, numPeriods: NUM_PERIODS } = usePeriods();
+  const [labNumber, setLabNumber] = useState<number>(()=> labNumbers[0] || 1);
   // Access periods first so value is available when building matrix
-  const { numPeriods: NUM_PERIODS } = usePeriods();
 
   // Helper to make empty matrix sized for current NUM_PERIODS
   const buildEmptyMatrix = () => Array(6).fill(null).map(() => Array(NUM_PERIODS).fill(null));
@@ -71,7 +71,7 @@ const ViewLabTimetables: React.FC = () => {
     <div className="space-y-6">
       <h2 className="text-2xl font-bold text-blue-400 flex items-center gap-2"><MdComputer/> LAB {labNumber} TIMETABLE</h2>
       <div className="flex gap-3 mb-4">
-        {[1,2,3].map(n=>(
+        {labNumbers.map(n=>(
           <button key={n} onClick={()=>setLabNumber(n)} className={`px-4 py-2 rounded-lg border ${labNumber===n?'bg-blue-600 text-white':'bg-white hover:bg-blue-50'}`}>Lab {n}</button>
         ))}
       </div>

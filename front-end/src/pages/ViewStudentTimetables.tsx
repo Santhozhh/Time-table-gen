@@ -4,7 +4,12 @@ import { generatedTimetableApi, facultyApi } from '../services/api';
 import {  MdDownload, MdEdit, MdDelete, MdChevronLeft, MdChevronRight, MdGroup } from 'react-icons/md';
 import { useNavigate } from 'react-router-dom';
 import { usePeriods } from '../context/PeriodsContext';
+
 const apis = import.meta.env.VITE_API_URL || '/api'; // Fallback for local dev
+
+// Build combinations of year and section based on dynamic sections list
+
+
 interface TimetableCell {
   courseName: string;
   courseCode: string;
@@ -29,19 +34,21 @@ interface YearSection {
   section: string;
 }
 
-const predefinedYearSections: YearSection[] = (() => {
-  const arr: YearSection[] = [];
-  for (let y = 1; y <= 4; y++) {
-    ['A', 'B', 'C'].forEach((sec) => arr.push({ year: y, section: sec }));
-  }
-  return arr;
-})();
-
 const ViewStudentTimetables: React.FC = () => {
+  const { numPeriods: NUM_PERIODS, sections } = usePeriods();
+
+  const allYearSections: YearSection[] = useMemo(()=>{
+    const arr:YearSection[]=[];
+    for(let y=1;y<=4;y++){
+      sections.forEach(sec=> arr.push({year:y, section:sec}));
+    }
+    return arr;
+  },[sections]);
+
   const [timetables, setTimetables] = useState<GeneratedTimetable[]>([]);
   const [faculty, setFaculty] = useState<any[]>([]);
-  const [selectedYS, setSelectedYS] = useState<YearSection >(predefinedYearSections[0]);
-  const { numPeriods: NUM_PERIODS } = usePeriods();
+  const [selectedYS, setSelectedYS] = useState<YearSection>(()=> allYearSections[0] || {year:1,section:sections[0]||'A'});
+  // NUM_PERIODS already imported above from context
   // Change matrix to hold arrays of TimetableCell (or null)
   const [matrix, setMatrix] = useState<(TimetableCell[] | null)[][]>(Array(6).fill(null).map(() => Array(NUM_PERIODS).fill(null)));
   const [loading, setLoading] = useState(true);
@@ -120,6 +127,13 @@ const ViewStudentTimetables: React.FC = () => {
     setMatrix(Array(6).fill(null).map(() => Array(NUM_PERIODS).fill(null)));
     setSelectedTimetable(null);
   }, [selectedYS, timetables]);
+
+  // Keep selectedYS valid when sections list changes
+  useEffect(()=>{
+     if(!selectedYS || !sections.includes(selectedYS.section)){
+        setSelectedYS(allYearSections[0] || {year:1,section:sections[0]||'A'});
+     }
+  },[sections, allYearSections]);
 
   // effect when ttIndex changes
   useEffect(()=>{
@@ -204,7 +218,7 @@ const ViewStudentTimetables: React.FC = () => {
           {!listCollapsed && (
           <div className="space-y-3 ">
             <button className=" size-5 -right-4 top-0 p-1 rounded-full bg-gray-100 hover:bg-gray-200" onClick={()=>setListCollapsed(true)} title="Hide list"><MdChevronLeft/></button>
-            {predefinedYearSections.map((ys) => {
+            {allYearSections.map((ys) => {
               const key = `${ys.year}${ys.section}`;
               const isActive = selectedYS?.year === ys.year && selectedYS?.section === ys.section;
               const hasTT = availabilitySet.has(key);
