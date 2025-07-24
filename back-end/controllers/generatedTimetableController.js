@@ -2,9 +2,7 @@ const GeneratedTimetable = require('../models/GeneratedTimetable');
 const constants = require('../constants');
 const ExcelJS = require('exceljs');
 
-// helper to detect faculty conflicts. Optionally exclude a timetable (when updating)
 const hasFacultyConflict = async (newTimetable, excludeId = null) => {
-  // fetch all existing timetables
   const existing = await GeneratedTimetable.find();
   const extractFacs = (slot) => {
     if (!slot) return [];
@@ -18,7 +16,7 @@ const hasFacultyConflict = async (newTimetable, excludeId = null) => {
   };
 
   for (const oldTT of existing) {
-    if (excludeId && String(oldTT._id) === String(excludeId)) continue; // skip comparing with itself
+    if (excludeId && String(oldTT._id) === String(excludeId)) continue; 
     for (let day = 0; day < 6; day++) {
       for (let period = 0; period < constants.NUM_PERIODS; period++) {
         const newSlot = newTimetable[day]?.[period];
@@ -33,7 +31,6 @@ const hasFacultyConflict = async (newTimetable, excludeId = null) => {
   }
   return { conflict: false };
 };
-// Create new generated timetable
 exports.createGeneratedTimetable = async (req, res) => {
   try {
     const { timetable, courses } = req.body;
@@ -41,7 +38,6 @@ exports.createGeneratedTimetable = async (req, res) => {
       return res.status(400).json({ message: 'Missing timetable or courses' });
     }
 
-    // Conflict detection
     const { conflict, day, period } = await hasFacultyConflict(timetable, null);
     if (conflict) {
       return res.status(409).json({ message: `Faculty conflict detected on day ${day + 1}, period ${period + 1}` });
@@ -55,7 +51,6 @@ exports.createGeneratedTimetable = async (req, res) => {
   }
 };
 
-// Get all generated timetables (latest first)
 exports.getAllGeneratedTimetables = async (req, res) => {
   try {
     const list = await GeneratedTimetable.find().sort({ createdAt: -1 });
@@ -65,7 +60,6 @@ exports.getAllGeneratedTimetables = async (req, res) => {
   }
 };
 
-// Get single generated timetable by ID
 exports.getGeneratedTimetableById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -78,19 +72,15 @@ exports.getGeneratedTimetableById = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
-
-// Update an existing generated timetable
 exports.updateGeneratedTimetable = async (req, res) => {
   try {
     const { id } = req.params;
     const { timetable, courses } = req.body;
 
-    // Validate input
     if (!timetable || !courses) {
       return res.status(400).json({ message: 'Missing timetable or courses' });
     }
 
-    // Optional: conflict detection (skip conflict check with same doc)
     const { conflict, day, period } = await hasFacultyConflict(timetable, id);
     if (conflict) {
       return res.status(409).json({ message: `Faculty conflict detected on day ${day + 1}, period ${period + 1}` });
@@ -112,7 +102,6 @@ exports.updateGeneratedTimetable = async (req, res) => {
   }
 };
 
-// Export timetable to Excel
 exports.exportExcel = async (req, res) => {
   try {
     const { id } = req.params;
@@ -143,10 +132,7 @@ exports.exportExcel = async (req, res) => {
 
     ws.columns.forEach(col=>{col.alignment={vertical:'middle', horizontal:'center', wrapText:true}; col.width=20;});
 
-    /* ---------- Course List Section ---------- */
-    ws.addRow([]); // empty row
-
-    // prepare faculty name lookup
+    ws.addRow([]); 
     const Faculty = require('../models/Faculty');
     const facIds = new Set();
     tt.courses.forEach(c=>{
@@ -179,7 +165,6 @@ exports.exportExcel = async (req, res) => {
       });
     });
 
-    // Determine class year & section for filename if available
     let fileSuffix = id;
     const firstCourse = tt.courses.find(c=>c.year && c.section);
     if(firstCourse){
@@ -196,7 +181,6 @@ exports.exportExcel = async (req, res) => {
   }
 }; 
 
-// Delete a generated timetable
 exports.deleteGeneratedTimetable = async (req, res) => {
   try {
     const { id } = req.params;

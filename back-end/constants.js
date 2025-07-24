@@ -1,17 +1,11 @@
-// Global application constants (mutable so they can be updated at runtime)
-// NOTE: Changing NUM_PERIODS via the settings route will immediately affect
-// any logic that reads this property afterwards (e.g. validations, controllers).
-// Default to 7 periods per day but can be updated through API.
 let NUM_PERIODS = 7;
-let PERIOD_TIMES = Array.from({ length: NUM_PERIODS }, (_, i) => ``); // Empty times by default
+let PERIOD_TIMES = Array.from({ length: NUM_PERIODS }, (_, i) => ``); 
 
 const resizeTimes = (n) => {
   if (PERIOD_TIMES.length === n) return;
   if (PERIOD_TIMES.length < n) {
-    // extend with empty strings
     PERIOD_TIMES = [...PERIOD_TIMES, ...Array(n - PERIOD_TIMES.length).fill('')];
   } else {
-    // shrink
     PERIOD_TIMES = PERIOD_TIMES.slice(0, n);
   }
 };

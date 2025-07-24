@@ -1,4 +1,4 @@
-// MongoDB configuration file
+
 
 const mongoose = require('mongoose');
 
@@ -10,12 +10,9 @@ const connectDB = async () => {
 
     console.log('MongoDB Connected Successfully!');
     
-    // Log to indicate we're using a different database in the same cluster
-    if (conn.connection.db.databaseName === 'timetable_db') {
-      console.log('\x1b[33m%s\x1b[0m', '📝 Note: Using timetable_db in the LMS cluster');
-    }
+   
   } catch (err) {
-    console.error('\x1b[31m%s\x1b[0m', '❌ MongoDB Connection Error:', err.message);
+    console.error(' MongoDB Connection Error:', err.message);
     process.exit(1);
   }
 };

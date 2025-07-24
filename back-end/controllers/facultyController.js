@@ -1,6 +1,5 @@
 const Faculty = require('../models/Faculty');
 
-// Get all faculty members
 exports.getAllFaculty = async (req, res) => {
   try {
     const faculty = await Faculty.find({ active: true });
@@ -10,7 +9,6 @@ exports.getAllFaculty = async (req, res) => {
   }
 };
 
-// Get a single faculty member
 exports.getFaculty = async (req, res) => {
   try {
     const faculty = await Faculty.findById(req.params.id);
@@ -23,7 +21,6 @@ exports.getFaculty = async (req, res) => {
   }
 };
 
-// Create a new faculty mem ber
 exports.createFaculty = async (req, res) => {
   const facultyPayload = {
     name: req.body.name,
@@ -31,7 +28,7 @@ exports.createFaculty = async (req, res) => {
     specialization: req.body.specialization,
     maxHoursPerWeek: req.body.maxHoursPerWeek,
   };
-  if (req.body.code) facultyPayload.code = req.body.code; // include only if provided
+  if (req.body.code) facultyPayload.code = req.body.code; 
 
   const faculty = new Faculty(facultyPayload);
 
@@ -43,7 +40,6 @@ exports.createFaculty = async (req, res) => {
   }
 };
 
-// Update a faculty member
 exports.updateFaculty = async (req, res) => {
   try {
     const faculty = await Faculty.findById(req.params.id);
@@ -59,7 +55,6 @@ exports.updateFaculty = async (req, res) => {
   }
 };
 
-// Delete a faculty member (soft delete)
 exports.deleteFaculty = async (req, res) => {
   try {
     const facultyId = req.params.id;
@@ -69,26 +64,17 @@ exports.deleteFaculty = async (req, res) => {
       return res.status(404).json({ message: 'Faculty not found' });
     }
 
-    // Soft-delete – mark as inactive
     faculty.active = false;
     await faculty.save();
 
-    /* ------------------------------------------------------------------
-       Cascade update: Remove the faculty from all timetables so that the
-       corresponding periods become free for allocation.
-    ------------------------------------------------------------------ */
     const Timetable = require('../models/Timetable');
     const GeneratedTimetable = require('../models/GeneratedTimetable');
 
-    // 1) Remove the faculty from classic Timetable documents
-    //    Any period that references the faculty will be removed from the
-    //    day's periods array, effectively freeing the slot.
     await Timetable.updateMany(
       { 'days.periods.facultyId': facultyId },
       { $pull: { 'days.$[].periods': { facultyId: facultyId } } }
     );
 
-    // 2) Remove the faculty from GeneratedTimetable matrices
     const affectedGenTTs = await GeneratedTimetable.find({
       $or: [
         { 'timetable': { $elemMatch: { $elemMatch: { facultyId: facultyId } } } },
@@ -104,7 +90,6 @@ exports.deleteFaculty = async (req, res) => {
           const slot = tt.timetable[day][period];
           if (!slot) continue;
 
-          // Helper to compare ids as strings
           const isRemoved = (cell) =>
             cell && (String(cell.facultyId) === facultyId || String(cell.additionalFacultyId) === facultyId);
 
@@ -116,7 +101,7 @@ exports.deleteFaculty = async (req, res) => {
             }
           } else if (isRemoved(slot)) {
             modified = true;
-            tt.timetable[day][period] = null; // free the period
+            tt.timetable[day][period] = null; 
           }
         }
       }

@@ -28,7 +28,7 @@ const daySchema = new mongoose.Schema({
       {
         validator: function(periods) {
           const { NUM_PERIODS } = require('../constants');
-          return periods.length <= NUM_PERIODS; // Maximum periods per day
+          return periods.length <= NUM_PERIODS; 
         },
         message: function() {
           const { NUM_PERIODS } = require('../constants');
@@ -57,7 +57,7 @@ const timetableSchema = new mongoose.Schema({
     validate: [
       {
         validator: function(days) {
-          return days.length <= 6; // Maximum 6 days per week
+          return days.length <= 6;
         },
         message: 'Cannot exceed 6 days per week'
       }
@@ -76,7 +76,6 @@ const timetableSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Middleware to check faculty conflicts before saving
 timetableSchema.pre('save', async function(next) {
   try {
     const Timetable = this.constructor;
@@ -85,7 +84,6 @@ timetableSchema.pre('save', async function(next) {
       status: 'published'
     });
 
-    // Check for faculty conflicts
     for (let day = 0; day < this.days.length; day++) {
       for (let period = 0; period < this.days[day].periods.length; period++) {
         const currentFacultyId = this.days[day].periods[period]?.facultyId;

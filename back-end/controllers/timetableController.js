@@ -1,7 +1,6 @@
 const Timetable = require('../models/Timetable');
 const Faculty = require('../models/Faculty');
 
-// Get all timetables
 exports.getAllTimetables = async (req, res) => {
   try {
     const timetables = await Timetable.find()
@@ -12,7 +11,6 @@ exports.getAllTimetables = async (req, res) => {
   }
 };
 
-// Get timetable by ID
 exports.getTimetable = async (req, res) => {
   try {
     const timetable = await Timetable.findById(req.params.id)
@@ -26,7 +24,6 @@ exports.getTimetable = async (req, res) => {
   }
 };
 
-// Get faculty's timetables
 exports.getFacultyTimetables = async (req, res) => {
   try {
     const facultyId = req.params.facultyId;
@@ -40,7 +37,6 @@ exports.getFacultyTimetables = async (req, res) => {
   }
 };
 
-// Create new timetable
 exports.createTimetable = async (req, res) => {
   try {
     const timetable = new Timetable(req.body);
@@ -51,7 +47,6 @@ exports.createTimetable = async (req, res) => {
   }
 };
 
-// Update timetable
 exports.updateTimetable = async (req, res) => {
   try {
     const timetable = await Timetable.findById(req.params.id);
@@ -67,7 +62,6 @@ exports.updateTimetable = async (req, res) => {
   }
 };
 
-// Delete timetable
 exports.deleteTimetable = async (req, res) => {
   try {
     const timetable = await Timetable.findById(req.params.id);
@@ -82,7 +76,6 @@ exports.deleteTimetable = async (req, res) => {
   }
 };
 
-// Check faculty availability
 exports.checkFacultyAvailability = async (req, res) => {
   try {
     const { facultyId, day, period } = req.body;
