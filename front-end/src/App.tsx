@@ -150,7 +150,7 @@ function App() {
                 toast.success('Email copied to clipboard');
               }}
             >
-              <MdEmail /> Stay Connected click here to copy my email
+              <MdEmail /> 
           <h1> {!collapsed && <span className="text-xs font-medium text-gray-700">Contact </span>}</h1>
             </a>
             
