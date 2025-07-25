@@ -110,7 +110,17 @@ const FacultyEdit: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="page">
+      {/* Hero header */}
+      <div className="space-y-4 text-center max-w-xl mx-auto">
+        <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 rounded-full text-sm">
+          <MdPerson className="text-lg" />
+          <span>FACULTY MANAGEMENT</span>
+        </div>
+        <h2 className="text-3xl font-extrabold text-gray-800">Add, edit, and organize faculty profiles</h2>
+        <p className="text-gray-500">Maintain an up-to-date list of lecturers with designations and specializations.</p>
+      </div>
+
       <div className="card">
         <div className="card-gradient-header">
           <div className="flex items-center gap-4">

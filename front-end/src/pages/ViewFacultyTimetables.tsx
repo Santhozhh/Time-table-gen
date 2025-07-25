@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { facultyApi, generatedTimetableApi } from '../services/api';
 import { usePeriods } from '../context/PeriodsContext';
 
-import { MdPerson, MdChevronLeft, MdChevronRight } from 'react-icons/md';
+import { MdPerson, MdChevronLeft, MdChevronRight, MdDownload } from 'react-icons/md';
 
 interface Faculty {
   _id: string;
@@ -96,16 +96,60 @@ const ViewFacultyTimetables: React.FC = () => {
     return count;
   };
 
+  const downloadSummary = async () => {
+    try {
+      const response = await generatedTimetableApi.downloadFacultySummary();
+      const blob = new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'faculty_summary.xlsx';
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Failed to download faculty summary:', error);
+    }
+  };
+
+  const downloadSingle = async () => {
+    if (!selectedFaculty) return;
+    try {
+      const response = await generatedTimetableApi.downloadFacultyTimetable(selectedFaculty._id);
+      const blob = new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${selectedFaculty.name}_timetable.xlsx`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Failed to download single timetable:', error);
+    }
+  };
 
 
   return (
-    <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-blue-400">FACULTY TIMETABLES</h2>
+    <div className="page">
+      {/* Hero header */}
+      <div className="space-y-4 text-center max-w-xl mx-auto">
+        <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 rounded-full text-sm">
+          <MdPerson className="text-lg" />
+          <span>FACULTY TIMETABLES</span>
+        </div>
+        <h2 className="text-3xl font-extrabold text-gray-800">Monitor workload & free periods</h2>
+        <p className="text-gray-500">Browse each faculty member’s schedule and availability.</p>
+      </div>
+
+      {/* Summary button */}
+      <div className="flex justify-end max-w-5xl mx-auto mb-4">
+        <button onClick={downloadSummary} className="btn-primary flex items-center gap-2">
+          <MdDownload/> Download All Faculty'Download All Faculty's Timetable    </button>
+      </div>
 
       <div className={`grid grid-cols-1 ${listCollapsed ? '' : 'md:grid-cols-3'} gap-6`}>
         {/* Faculty list */}
         {!listCollapsed && (
-        <div className="space-y-3 ">
+        <div className="space-y-3 overflow-y-auto max-h-[calc(100vh-12rem)] pr-2 scrollbar-thin scrollbar-thumb-gray-300 hover:scrollbar-thumb-gray-400">
           {/* Collapse button */}
           <button className=" size-5 -right-4 top-0 p-1 rounded-full bg-gray-100 hover:bg-gray-200" onClick={()=>setListCollapsed(true)} title="Hide list">
             <MdChevronLeft /> 
@@ -209,7 +253,7 @@ const ViewFacultyTimetables: React.FC = () => {
                             cells.push(
                               <td key={p} colSpan={span} className="table-cell animate-pop" style={{animationDelay:`${p*40}ms`}}>
                               <div className="space-y-1">
-                                <div className="font-medium text-gray-800 text-xs">{slot.shortForm || slot.courseName}</div>
+                                <div className="font-medium text-gray-800 text-xs truncate max-w-[90px]">{slot.shortForm || slot.courseName}</div>
                                   <div className="text-[10px] text-blue-600">Year :{slot.year}</div>
                                   <div className="text-[10px] text-blue-600">Sec : {slot.section}</div>
                               </div>
@@ -227,6 +271,10 @@ const ViewFacultyTimetables: React.FC = () => {
                   ))}
                 </tbody>
               </table>
+              </div>
+              <div className="flex justify-end gap-2 mt-4">
+                <button onClick={downloadSingle} className="btn-primary flex items-center gap-2 hover:bg-blue-600">
+                  <MdDownload/> Download {selectedFaculty.name}'s  Time Table     </button>
               </div>
             </div>
           )}

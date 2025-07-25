@@ -68,9 +68,19 @@ const ViewLabTimetables: React.FC = () => {
   }, [labNumber, NUM_PERIODS]);
 
   return (
-    <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-blue-400 flex items-center gap-2"><MdComputer/> LAB {labNumber} TIMETABLE</h2>
-      <div className="flex gap-3 mb-4">
+    <div className="page">
+      {/* Hero header */}
+      <div className="space-y-4 text-center max-w-xl mx-auto">
+        <div className="inline-flex items-center gap-2 px-4 py-2 bg-teal-50 text-teal-700 rounded-full text-sm">
+          <MdComputer className="text-lg" />
+          <span>LAB TIMETABLES</span>
+        </div>
+        <h2 className="text-3xl font-extrabold text-gray-800">Check lab occupancy at a glance</h2>
+        <p className="text-gray-500">Tap a lab number below to view its schedule.</p>
+      </div>
+
+      <h3 className="sr-only">Lab selector</h3>
+      <div className="flex gap-3 mb-4 justify-center">
         {labNumbers.map(n=>(
           <button key={n} onClick={()=>setLabNumber(n)} className={`px-4 py-2 rounded-lg border ${labNumber===n?'bg-blue-600 text-white':'bg-white hover:bg-blue-50'}`}>Lab {n}</button>
         ))}

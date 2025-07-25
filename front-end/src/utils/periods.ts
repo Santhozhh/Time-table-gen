@@ -11,7 +11,7 @@ export const setNumPeriods = (n: number): void => {
   if (Number.isInteger(n) && n > 0) {
     localStorage.setItem('numPeriods', String(n));
   }
-};
+}; 
 
 export const getSections = ():string[]=>{
   try { const v=localStorage.getItem('sections'); if(v) return JSON.parse(v); }catch{}; return ['A','B','C'];

@@ -1,5 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
-import { MdSchedule, MdPerson, MdGroup, MdEdit, MdChevronLeft, MdChevronRight, MdEmail , MdComputer , MdSettings, MdHome  } from 'react-icons/md';
+import { MdSchedule, MdPerson, MdGroup, MdEdit, MdChevronLeft, MdChevronRight, MdEmail , MdComputer,  MdHome, MdSettings } from 'react-icons/md';
 import { FaGraduationCap } from 'react-icons/fa';
 import { ToastProvider } from './components/ToastProvider';
 import { PeriodsProvider } from './context/PeriodsContext';
@@ -12,6 +12,10 @@ import EditPeriods from './pages/EditPeriods';
 import EditTimetable from './pages/EditTimetable';
 import ViewLabTimetables from './pages/ViewLabTimetables';
 import React from 'react';
+import { toast } from 'react-toastify';
+
+// Dark mode helper
+
 
 const NavLink = ({ to, icon, text, collapsed }: { to: string; icon: React.ReactNode; text: string; collapsed: boolean }) => {
   const location = useLocation();
@@ -74,49 +78,49 @@ function App() {
               {collapsed ? <MdChevronRight /> : <MdChevronLeft />}
             </button>
           <ul className="space-y-3 flex-1">
-          <li >
+          <li  className='hover:shadow-lg transition-shadow duration-200 rounded-4xl'>
               <NavLink 
                 to="/" 
                 icon={<MdHome />} 
                 text="Home" collapsed={collapsed}
               />
             </li>
-            <li >
+            <li  className='hover:shadow-lg transition-shadow duration-200 rounded-4xl'>
               <NavLink 
                 to="/make-timetable" 
                 icon={<MdSchedule />} 
                 text="Make Timetable" collapsed={collapsed}
               />
             </li>
-            <li>
+            <li  className='hover:shadow-lg transition-shadow duration-200 rounded-4xl'>
               <NavLink 
                 to="/view-student-timetables" 
                 icon={<MdGroup />} 
                 text="Student Timetables" collapsed={collapsed}
               />
             </li>
-            <li>
+            <li  className='hover:shadow-lg transition-shadow duration-200 rounded-4xl'>
               <NavLink 
                 to="/view-faculty-timetables" 
                 icon={<MdPerson />} 
                 text="Faculty Timetables" collapsed={collapsed}
               />
             </li>
-            <li>
+            <li  className='hover:shadow-lg transition-shadow duration-200 rounded-4xl'>
               <NavLink 
                 to="/view-lab-timetables" 
                 icon={<MdComputer />} 
                 text="Lab Timetables" collapsed={collapsed}
               />
             </li>
-            <li>
+            <li  className='hover:shadow-lg transition-shadow duration-200 rounded-4xl'>
               <NavLink 
                 to="/faculty-edit" 
                 icon={<MdEdit />} 
                 text="Edit Faculty" collapsed={collapsed}
               />
             </li>
-            <li>
+            <li  className='hover:shadow-lg transition-shadow duration-200 rounded-4xl'>
               <NavLink
                 to="/edit-periods"
                 icon={<MdSettings />}
@@ -137,12 +141,16 @@ function App() {
 
           {/* Bottom controls: mail then collapse */}
           <div className="mt-auto flex flex-col items-center gap-3">
+            {/* Dark mode toggle */}
+           
             <a
-              href="mailto:ksdsanthosh130@gmail.com?subject=Digital%20Timetable%20Query"
-              className={`flex items-center gap-2 p-2 text-xl text-gray-600 rounded-full hover:bg-gray-100 transition-colors focus:outline-none ${collapsed ? 'justify-center' : ''}`}
-              title="Email Developer"
+              className='flex items-center gap-2 p-2 text-sm text-gray-600 rounded-full hover:bg-gray-100 transition-colors focus:outline-none'
+              onClick={()=>{
+                navigator.clipboard.writeText('ksdsanthosh130@gmail.com');
+                toast.success('Email copied to clipboard');
+              }}
             >
-              <MdEmail />
+              <MdEmail /> Stay Connected click here to copy my email
           <h1> {!collapsed && <span className="text-xs font-medium text-gray-700">Contact </span>}</h1>
             </a>
             

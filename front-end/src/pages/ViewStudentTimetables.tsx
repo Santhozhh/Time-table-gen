@@ -197,7 +197,7 @@ const ViewStudentTimetables: React.FC = () => {
             .join(', ');
           return (
             <div key={idx} className="border-b last:border-none pb-1 mb-1 last:pb-0 last:mb-0">
-              <div className="font-medium text-gray-800">{cell.shortForm || cell.courseName}</div>
+              <div className="font-medium text-gray-800 truncate max-w-[110px]">{cell.shortForm || cell.courseName}</div>
               <div className="text-sm text-blue-600">{cell.courseCode}</div>
               {names && <div className="text-xs text-gray-500">{names}</div>}
             </div>
@@ -208,15 +208,23 @@ const ViewStudentTimetables: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-blue-400">STUDENTS TIMETABLES</h2>
+    <div className="page">
+      {/* Hero header */}
+      <div className="space-y-4 text-center max-w-xl mx-auto">
+        <div className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-700 rounded-full text-sm">
+          <MdGroup className="text-lg" />
+          <span>STUDENT TIMETABLES</span>
+        </div>
+        <h2 className="text-3xl font-extrabold text-gray-800">Find your schedule in a tap</h2>
+        <p className="text-gray-500">Select a year–section on the left and swipe to explore.</p>
+      </div>
 
       {loading && <p>Loading...</p>}
       {!loading && (
         <div className={`grid grid-cols-1 ${listCollapsed?'':'md:grid-cols-3'} gap-6`}>
           {/* Year-Section list */}
           {!listCollapsed && (
-          <div className="space-y-3 ">
+          <div className="space-y-3 overflow-y-auto max-h-[calc(100vh-12rem)] pr-2 scrollbar-thin scrollbar-thumb-gray-300 hover:scrollbar-thumb-gray-400">
             <button className=" size-5 -right-4 top-0 p-1 rounded-full bg-gray-100 hover:bg-gray-200" onClick={()=>setListCollapsed(true)} title="Hide list"><MdChevronLeft/></button>
             {allYearSections.map((ys) => {
               const key = `${ys.year}${ys.section}`;
@@ -226,13 +234,13 @@ const ViewStudentTimetables: React.FC = () => {
                 <button
                   key={key}
                   onClick={() => setSelectedYS(ys)}
-                  className={`w-full flex items-center gap-3 p-4 border rounded-lg text-left transition-colors
+                  className={`w-full flex items-center gap-3 p-4 border rounded-lg text-left transition-colors rounded-4xl
                     ${hasTT ? 'bg-indigo-50 border-indigo-600 text-indigo-700' : 'bg-red-50 border-red-500 text-red-600'}
-                    ${isActive ? 'ring-2 ring-indigo-700' : 'hover:bg-gray-50'}`}
+                    ${isActive ? hasTT ? 'ring-2 ring-indigo-700' : 'ring-2 ring-red-700' : 'hover:bg-gray-50'}`}
                 >
                   <MdGroup className="text-2xl text-blue-600" />
                   <div>
-                    <p className="font-medium text-gray-800">Year {ys.year} – Sec {ys.section}'s Time Table</p>
+                    <p className="font-medium text-gray-800">Year : {ys.year} <br/> Sec {ys.section} <br/> Time Table</p>
                   </div>
                 </button>
               );
@@ -328,9 +336,9 @@ const ViewStudentTimetables: React.FC = () => {
                 </div>
               </div>
             ) : (
-              <div className="flex flex-col items-start gap-4">
+              <div className="flex flex-col items-start gap-4  overflow-y-auto max-h-[calc(100vh-12rem)] pr-2 scrollbar-thin scrollbar-thumb-gray-300 hover:scrollbar-thumb-gray-400">
                 <p className="text-gray-600">No timetable exists for Year {selectedYS?.year} Section {selectedYS?.section}.</p>
-                <button onClick={()=>navigate(`/make-timetable?year=${selectedYS?.year}&section=${selectedYS?.section}`)} className="btn-primary">Create Timetable</button>
+                <button onClick={()=>navigate(`/make-timetable?year=${selectedYS?.year}&section=${selectedYS?.section}`)} className="btn-primary">Create Time Table for Year :{selectedYS?.year} Section :{selectedYS?.section}</button>
               </div>
             )}
           </div>

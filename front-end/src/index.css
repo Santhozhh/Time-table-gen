@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @layer components {
   .card {
     @apply bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden;
@@ -159,6 +161,12 @@
 
   .subject-item {
     @apply flex justify-between items-center p-4 bg-gray-50 rounded-lg border border-gray-200;
+  }
+}
+
+@layer utilities {
+  .page {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8 ;
   }
 }
   

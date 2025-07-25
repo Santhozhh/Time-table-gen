@@ -362,7 +362,17 @@ const EditTimetable: React.FC = () => {
   const freePeriods = totalPeriods - allocatedTotal;
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="page">
+      {/* Hero header */}
+      <div className="space-y-4 text-center max-w-xl mx-auto">
+        <div className="inline-flex items-center gap-2 px-4 py-2 bg-purple-50 text-purple-700 rounded-full text-sm">
+          <MdClass className="text-lg" />
+          <span>EDIT TIMETABLE</span>
+        </div>
+        <h2 className="text-3xl font-extrabold text-gray-800">Fine-tune your schedule</h2>
+        <p className="text-gray-500">Adjust subjects and period allocations; changes apply instantly.</p>
+      </div>
+
       <div className="card">
         <div className="card-gradient-header">
           <div className="flex items-center gap-4">

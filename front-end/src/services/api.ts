@@ -35,6 +35,9 @@ export const generatedTimetableApi = {
   create: (data: any) => api.post('/generated-timetables', data),
   update: (id: string, data: any) => api.put(`/generated-timetables/${id}`, data),
   delete: (id: string) => api.delete(`/generated-timetables/${id}`),
+  // New downloads
+  downloadFacultySummary: () => api.get('/generated-timetables/faculty-summary', { responseType: 'blob' }),
+  downloadFacultyTimetable: (facId: string) => api.get(`/generated-timetables/faculty/${facId}/timetable`, { responseType: 'blob' }),
 };
 
 export default api; 

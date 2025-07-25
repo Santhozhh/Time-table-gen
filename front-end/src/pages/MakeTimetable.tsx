@@ -419,7 +419,17 @@ const MakeTimetable: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="page">
+      {/* Hero header */}
+      <div className="space-y-4 text-center max-w-xl mx-auto">
+        <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-full text-sm">
+          <MdSchedule className="text-lg" />
+          <span>CREATE TIMETABLE</span>
+        </div>
+        <h2 className="text-3xl font-extrabold text-gray-800">Craft your class schedule effortlessly</h2>
+        <p className="text-gray-500">Fill in course details below, then allocate periods visually.</p>
+      </div>
+
       {!showTimetable ? (
         <div className="card">
           <div className="card-gradient-header">
